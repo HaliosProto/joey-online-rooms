@@ -39,6 +39,12 @@ jobs:
           adb install android-installer/Joey-Online-Android.apk
       - name: Download and start the actual game in Android WebView
         run: python3 mobile/test_android.py
+      - name: Preserve emulator startup diagnostics
+        if: always()
+        run: |
+          mkdir -p android-test-results
+          cp /tmp/joey-emulator.log android-test-results/emulator.log || true
+          adb devices -l > android-test-results/devices.txt || true
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
