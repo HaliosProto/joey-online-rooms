@@ -1,0 +1,73 @@
+#include "peer.hpp"
+#include <iostream>
+#include <chrono>
+
+struct Observation {
+    std::mutex mutex;
+    std::condition_variable changed;
+    GUID room{};
+    IDirectPlay8Address* address = nullptr;
+    int players = 0;
+    joey::Bytes received;
+    DWORD sender = 0;
+    bool ended = false;
+    ~Observation() { if (address) address->Release(); }
+};
+static HRESULT WINAPI callback(void* context, DWORD id, void* value) {
+    auto& observation = *static_cast<Observation*>(context);
+    std::lock_guard<std::mutex> lock(observation.mutex);
+    if (id == DPN_MSGID_CREATE_PLAYER) ++observation.players;
+    if (id == DPN_MSGID_ENUM_HOSTS_RESPONSE) {
+        auto* message = static_cast<DPNMSG_ENUM_HOSTS_RESPONSE*>(value);
+        if (message->pApplicationDescription->dwCurrentPlayers == 1 && message->pApplicationDescription->pwszSessionName && std::wstring(message->pApplicationDescription->pwszSessionName) == L"Headless validation") {
+            observation.room = message->pApplicationDescription->guidInstance;
+            if (observation.address) observation.address->Release();
+            observation.address = message->pAddressSender; observation.address->AddRef();
+        }
+    }
+    if (id == DPN_MSGID_RECEIVE) { auto* message = static_cast<DPNMSG_RECEIVE*>(value); observation.sender = message->dpnidSender; observation.received.assign(message->pReceiveData, message->pReceiveData + message->dwReceiveDataSize); }
+    if (id == DPN_MSGID_TERMINATE_SESSION) observation.ended = true;
+    observation.changed.notify_all(); return S_OK;
+}
+static void require(bool condition, const char* message) { if (!condition) throw std::runtime_error(message); }
+static void okay(HRESULT result, const char* message) { require(SUCCEEDED(result), message); }
+int wmain(int argc, wchar_t** argv) {
+    if (argc != 2) { std::cerr << "Usage: native-check.exe https://cloud-endpoint\n"; return 2; }
+    Observation hostEvents, guestEvents, thirdEvents;
+    joey::Peer host(argv[1]), guest(argv[1]), third(argv[1]);
+    try {
+        okay(host.Initialize(&hostEvents, callback, 0), "Host initialization failed");
+        okay(guest.Initialize(&guestEvents, callback, 0), "Guest initialization failed");
+        okay(third.Initialize(&thirdEvents, callback, 0), "Third initialization failed");
+        DPN_PLAYER_INFO info{}; info.dwSize = sizeof(info); info.dwInfoFlags = DPNINFO_NAME; info.pwszName = const_cast<wchar_t*>(L"Host");
+        okay(host.SetPeerInfo(&info, nullptr, nullptr, DPNSETPEERINFO_SYNC), "Host name failed");
+        info.pwszName = const_cast<wchar_t*>(L"Friend"); okay(guest.SetPeerInfo(&info, nullptr, nullptr, DPNSETPEERINFO_SYNC), "Guest name failed");
+        DPN_APPLICATION_DESC description{}; description.dwSize = sizeof(description); description.dwMaxPlayers = 2;
+        CoCreateGuid(&description.guidApplication); description.pwszSessionName = const_cast<wchar_t*>(L"Headless validation");
+        okay(host.Host(&description, nullptr, 0, nullptr, nullptr, nullptr, 0), "Cloud hosting failed");
+        okay(guest.EnumHosts(&description, nullptr, nullptr, nullptr, 0, 1, 0, 0, nullptr, nullptr, DPNENUMHOSTS_SYNC), "Room discovery failed");
+        require(guestEvents.address != nullptr, "Hosted room was not listed");
+        okay(guest.Connect(&description, guestEvents.address, nullptr, nullptr, nullptr, nullptr, 0, nullptr, nullptr, nullptr, 0), "Cloud join failed");
+        {
+            std::unique_lock<std::mutex> lock(hostEvents.mutex);
+            require(hostEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return hostEvents.players == 2;}), "Host did not see guest");
+        }
+        require(guestEvents.players == 2, "Guest did not see both players");
+        DWORD size = 0; require(guest.GetPeerInfo(1, nullptr, &size, 0) == DPNERR_BUFFERTOOSMALL, "Player size negotiation failed");
+        joey::Bytes playerBytes(size); auto* player = reinterpret_cast<DPN_PLAYER_INFO*>(playerBytes.data()); player->dwSize = sizeof(*player);
+        okay(guest.GetPeerInfo(1, player, &size, 0), "Host metadata missing");
+        require((player->dwPlayerFlags & DPNPLAYER_HOST) && !(player->dwPlayerFlags & DPNPLAYER_LOCAL) && std::wstring(player->pwszName) == L"Host", "Host identity is wrong");
+        require(FAILED(third.Connect(&description, guestEvents.address, nullptr, nullptr, nullptr, nullptr, 0, nullptr, nullptr, nullptr, 0)), "Third player joined a full room");
+        joey::Bytes payload{2,0,255,128,1,0,42}; DPN_BUFFER_DESC buffer{static_cast<DWORD>(payload.size()), payload.data()};
+        okay(host.SendTo(2, &buffer, 1, 0, nullptr, nullptr, DPNSEND_GUARANTEED | DPNSEND_NOLOOPBACK), "Host send failed");
+        { std::unique_lock<std::mutex> lock(guestEvents.mutex); require(guestEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return !guestEvents.received.empty();}), "Guest did not receive duel bytes"); require(guestEvents.sender == 1 && guestEvents.received == payload, "Duel bytes changed in relay"); }
+        payload = {255,0,12,128,0}; buffer.dwBufferSize = static_cast<DWORD>(payload.size()); buffer.pBufferData = payload.data();
+        okay(guest.SendTo(1, &buffer, 1, 0, nullptr, nullptr, DPNSEND_GUARANTEED | DPNSEND_NOLOOPBACK), "Guest send failed");
+        { std::unique_lock<std::mutex> lock(hostEvents.mutex); require(hostEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return !hostEvents.received.empty();}), "Host did not receive duel bytes"); require(hostEvents.sender == 2 && hostEvents.received == payload, "Reverse duel bytes changed"); }
+        guest.Close(0);
+        { std::unique_lock<std::mutex> lock(hostEvents.mutex); require(hostEvents.changed.wait_for(lock, std::chrono::seconds(8), [&] {return hostEvents.ended;}), "Disconnect was not propagated"); }
+        host.Close(0); third.Close(0);
+        std::cout << "PASS: native hosting, public discovery, joining, player identities, capacity, bidirectional payloads, and disconnect\n";
+        return 0;
+    } catch (const std::exception& error) { std::cerr << "FAIL: " << error.what() << "\n"; return 1; }
+}
