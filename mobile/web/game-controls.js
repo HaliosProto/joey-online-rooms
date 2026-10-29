@@ -2,10 +2,11 @@
 (()=>{
  const canvas=document.getElementById('canvas');let active=null,button=0,pressedAt=0;
  const send=(type,x,y)=>canvas.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,button,buttons:type==='mouseup'?0:button===2?2:1,view:window}));
- canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'||active!==null)return;e.preventDefault();active=e.pointerId;pressedAt=performance.now();button=window.joeyRightClick?2:0;canvas.setPointerCapture(active);send('mousemove',e.clientX,e.clientY);send('mousedown',e.clientX,e.clientY);},{passive:false});
- canvas.addEventListener('pointermove',e=>{if(e.pointerId!==active)return;e.preventDefault();send('mousemove',e.clientX,e.clientY);},{passive:false});
- const release=e=>{if(e.pointerId!==active)return;e.preventDefault();const x=e.clientX,y=e.clientY;setTimeout(()=>{send('mouseup',x,y);active=null;if(window.joeyRightClick){window.joeyRightClick=false;parent.postMessage({type:'joey-right-used'},location.origin);}},Math.max(0,100-(performance.now()-pressedAt)));};
- canvas.addEventListener('pointerup',release,{passive:false});canvas.addEventListener('pointercancel',release,{passive:false});
+ const touch=(type,handler)=>document.addEventListener(type,event=>{if(event.target!==canvas)return;event.preventDefault();event.stopImmediatePropagation();handler(event);},{capture:true,passive:false});
+ touch('touchstart',event=>{if(active!==null)return;const point=event.changedTouches[0];active=point.identifier;pressedAt=performance.now();button=window.joeyRightClick?2:0;send('mousemove',point.clientX,point.clientY);send('mousedown',point.clientX,point.clientY);});
+ touch('touchmove',event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(point)send('mousemove',point.clientX,point.clientY);});
+ const release=event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(!point)return;const x=point.clientX,y=point.clientY;setTimeout(()=>{send('mouseup',x,y);active=null;if(window.joeyRightClick){window.joeyRightClick=false;parent.postMessage({type:'joey-right-used'},location.origin);}},Math.max(0,100-(performance.now()-pressedAt)));};
+ touch('touchend',release);touch('touchcancel',release);
  window.joeyKey=(key,code,keyCode)=>{canvas.focus();const opts={bubbles:true,cancelable:true,key,code,keyCode,which:keyCode};document.dispatchEvent(new KeyboardEvent('keydown',opts));setTimeout(()=>document.dispatchEvent(new KeyboardEvent('keyup',opts)),80);};
  window.joeyType=character=>{canvas.focus();document.dispatchEvent(new KeyboardEvent('keypress',{bubbles:true,cancelable:true,key:character,charCode:character.codePointAt(0),keyCode:character.codePointAt(0),which:character.codePointAt(0)}));};
  const originalPrint=Module.print;Module.print=function(...args){originalPrint?.(...args);const text=args.join(' ');if(text.includes('integrated cloud networking enabled'))parent.postMessage({type:'joey-status',text:'Tap to click / drag cards / Right click for the next tap'},location.origin);};
