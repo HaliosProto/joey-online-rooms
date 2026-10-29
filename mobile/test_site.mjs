@@ -14,7 +14,7 @@ try{
  const until=Date.now()+12*60000;while(Date.now()<until&&!logs.some(l=>l.includes('integrated cloud networking enabled'))){if(errors.length)throw new Error(errors.join('\n'));await new Promise(r=>setTimeout(r,10000));}
  if(!logs.some(l=>l.includes('integrated cloud networking enabled')))throw new Error('Mobile interface did not start the original game');
  await new Promise(r=>setTimeout(r,5000));
- const frame=page.frames().find(f=>f.url().includes('boxedwine.html'));if(!frame)throw new Error('Missing game frame');
+ const frame=page.frames().find(f=>f.url().includes('boxedwine.html'));if(!frame)throw new Error('Missing game frame');if(process.env.TEST_SERVER)await frame.evaluate(url=>{Module['joeyCloudOrigin']=url;},process.env.TEST_SERVER);
  // Touch input must arrive as real mouse events at the emulator's scaled canvas.
  await frame.evaluate(()=>{window.testTouch=[];const native=Module['_boxedwineEmscriptenMouseButton'];if(typeof native!=='function')throw new Error('Native input API missing');Module['_boxedwineEmscriptenMouseButton']=function(down,button,x,y){window.testTouch.push({type:down?'mousedown':'mouseup',button,x,y,time:performance.now()});return native(down,button,x,y);};});
  const canvas=frame.locator('#canvas'),box=await canvas.boundingBox();await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.25);await new Promise(r=>setTimeout(r,5000));await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.25);await new Promise(r=>setTimeout(r,5000));let before,previous;const menuReadyUntil=Date.now()+60000;
@@ -24,7 +24,7 @@ try{
  const logoChange=imageChange(before,after,[.12,.08,.88,.48]),menuChange=imageChange(before,after,[.25,.75,.75,.94]);console.log('Rendered menu transition:',{logoChange,menuChange});
  if(logoChange>.02||menuChange<.08)throw new Error('Touch did not open Duel Mode while preserving the game logo');
 
- await page.mouse.click(box.x+box.width*.5,box.y+box.height*.90,{delay:500});await new Promise(r=>setTimeout(r,3000));await page.screenshot({path:'mobile-test-results/menu-mouse.png'});await page.locator('#enter').click();await new Promise(r=>setTimeout(r,4000));await page.screenshot({path:'mobile-test-results/menu-enter.png'});
+ await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.90);await new Promise(r=>setTimeout(r,4000));await page.screenshot({path:'mobile-test-results/two-player-data.png'});await page.touchscreen.tap(box.x+box.width*.36,box.y+box.height*.82);await new Promise(r=>setTimeout(r,7000));await page.screenshot({path:'mobile-test-results/network-setup.png'});
  const events=await frame.evaluate(()=>({events:window.testTouch,controls:typeof window.joeyKey,canvas:document.getElementById('canvas').getBoundingClientRect().toJSON()}));console.log('Touch diagnostics:',JSON.stringify(events));const touchEvents=events.events;if(!touchEvents.some(e=>e.type==='mousedown'&&e.button===0)||!touchEvents.some(e=>e.type==='mouseup'))throw new Error('Touch did not create complete mouse input');
  await page.locator('#right').click();await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.5);await new Promise(r=>setTimeout(r,800));if(await page.locator('#right').getAttribute('aria-pressed')!=='false')throw new Error('One-shot right click did not reset');
  // The game's Wine prefix uses persistent storage rather than memory-only launch.

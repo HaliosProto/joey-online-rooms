@@ -3,7 +3,7 @@ Mobile compatibility preview for the original Yu-Gi-Oh! Power of Chaos: Joey the
 - **iPhone / iPad:** Open https://haliosproto.github.io/joey-online-rooms/ in Safari, then Share → Add to Home Screen. Launch the new icon and download the game. No App Store listing or weekly signing is needed.
 - **Android:** Download Joey-Online-Android.apk below and allow installation from your browser when Android asks. Open Joey Online and download the game. You can also use the Home Screen web app instead of the APK.
 - First game download: approximately 573 MB. Use Wi-Fi, keep the app open and allow several minutes for the first startup. Game processing runs on your device; no PC host is needed.
-- Tap to click, drag cards, use Right click for the next tap, Back for Escape, Enter to confirm, and Name to type in a selected game field. Rotate to landscape.
+- Tap to click, drag cards, use Right click for the next tap, Back for Escape, Name to type in a selected game field. Rotate to landscape.
 - Saves stay in this app/browser on this device. Save inside the game and export a Save backup before clearing storage or uninstalling.
 
 The signed APK is a small launcher for the locally executed browser game; it downloads the game on first use. Existing Windows and Mac downloads remain available.

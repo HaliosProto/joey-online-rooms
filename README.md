@@ -22,7 +22,7 @@ https://haliosproto.github.io/joey-online-rooms/
 
 On iPhone or iPad, open the link in Safari, tap **Share → Add to Home Screen**, then launch the new icon. No App Store account, signing renewal or paid service is required. Android can use the same Home Screen app or the signed APK in the mobile release. The first game download is approximately 573 MB; use Wi-Fi. The original game runs locally through BoxedWine, with touch controls and the same online room service as desktop players. It is not streamed from a PC.
 
-Tap to click, drag to move cards, and use **Right click** for the next tap. **Back** sends Escape, **Enter** confirms, and **Name** types into the selected game text field. Turn the phone sideways. Saves are kept in this browser/app's private storage; save in game and export **Save backup** before removing browser data. Clearing storage or uninstalling can erase local progress. This is a compatibility preview: physical phones and a complete duel have not been qualified.
+Tap to click, drag to move cards, and use **Right click** for the next tap. **Back** sends Escape, **Name** types into the selected game text field. Turn the phone sideways. Saves are kept in this browser/app's private storage; save in game and export **Save backup** before removing browser data. Clearing storage or uninstalling can erase local progress. This is a compatibility preview: physical phones and a complete duel have not been qualified.
 
 **Windows multiplayer-only download for an existing game copy:**
 https://github.com/HaliosProto/joey-online-rooms/releases/tag/preview-2

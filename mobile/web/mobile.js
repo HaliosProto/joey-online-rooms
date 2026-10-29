@@ -31,7 +31,7 @@ function startGame(){
  frame.src='boxedwine.html?'+params;button.disabled=true;
 }
 function key(name,code,keyCode){const win=frame.contentWindow;win?.joeyKey?.(name,code,keyCode);}
-$('back').onclick=()=>key('Escape','Escape',27);$('enter').onclick=()=>key('Enter','Enter',13);
+$('back').onclick=()=>key('Escape','Escape',27);
 $('right').onclick=()=>{right=!right;$('right').setAttribute('aria-pressed',String(right));frame.contentWindow.joeyRightClick=right;};
 $('name').onclick=()=>{$('text-entry').showModal();$('typed').focus();};
 $('send-text').onclick=()=>{frame.contentWindow.joeyTypeText?.($('typed').value);$('typed').value='';};

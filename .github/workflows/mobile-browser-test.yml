@@ -44,7 +44,7 @@ jobs:
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install --with-deps ${{ inputs.browser }}
       - name: Start the isolated cloud room test service
-        if: inputs.check == 'network'
+        if: inputs.check == 'network' || inputs.check == 'frontend'
         run: |
           cd cloud
           npm ci
@@ -54,7 +54,7 @@ jobs:
         env:
           MOBILE_BROWSER: ${{ inputs.browser }}
           MOBILE_CHECK: ${{ inputs.check }}
-          TEST_SERVER: ${{ inputs.check == 'network' && 'http://127.0.0.1:8787' || '' }}
+          TEST_SERVER: ${{ (inputs.check == 'network' || inputs.check == 'frontend') && 'http://127.0.0.1:8787' || '' }}
         run: node ${{ inputs.check == 'frontend' && 'mobile/test_site.mjs' || 'mobile/probe_browser.mjs' }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

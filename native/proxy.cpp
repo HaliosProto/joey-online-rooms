@@ -1,6 +1,5 @@
 #include "peer.hpp"
 #include <mutex>
-#include <cstdio>
 
 namespace {
 HMODULE moduleHandle = nullptr;
@@ -21,23 +20,6 @@ HRESULT WINAPI onlineCreate(REFCLSID clsid, LPUNKNOWN outer, DWORD context, REFI
         }
     } catch (...) { *output = nullptr; return E_OUTOFMEMORY; }
     return originalCreate(clsid, outer, context, iid, output);
-}
-LONG CALLBACK mobileCrashTrace(EXCEPTION_POINTERS* info) {
-    if (!info || info->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION) return EXCEPTION_CONTINUE_SEARCH;
-    const auto* c = info->ContextRecord;
-    const auto image = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    if (c->Eip < image || c->Eip >= image + 0x1D9000) return EXCEPTION_CONTINUE_SEARCH;
-    char line[256]{};
-    sprintf_s(line, "Joey crash registers: IP=%08lX SP=%08lX AX=%08lX SI=%08lX DI=%08lX\n", c->Eip, c->Esp, c->Eax, c->Esi, c->Edi); OutputDebugStringA(line);
-    const auto address = static_cast<uintptr_t>(c->Esp);
-    MEMORY_BASIC_INFORMATION region{};
-    if (VirtualQuery(reinterpret_cast<void*>(address), &region, sizeof(region)) && region.State == MEM_COMMIT && !(region.Protect & (PAGE_NOACCESS | PAGE_GUARD))) {
-        const auto end = reinterpret_cast<uintptr_t>(region.BaseAddress) + region.RegionSize;
-        const auto count = (std::min)(size_t(48), static_cast<size_t>((end - address) / sizeof(DWORD)));
-        const auto* stack = reinterpret_cast<const DWORD*>(address);
-        for (size_t i = 0; i < count; ++i) { sprintf_s(line, "Joey crash stack %02u: %08lX\n", static_cast<unsigned int>(i), stack[i]); OutputDebugStringA(line); }
-    }
-    return EXCEPTION_CONTINUE_SEARCH;
 }
 void initialize() {
     wchar_t system[MAX_PATH]{};
@@ -74,7 +56,6 @@ void initialize() {
     if (!VirtualProtect(slot, sizeof(*slot), PAGE_READWRITE, &protection)) return;
     *slot = onlineCreate;
     DWORD unused = 0; VirtualProtect(slot, sizeof(*slot), protection, &unused);
-    if (wine && endpoint.rfind(L"http://127.0.0.1", 0) == 0) AddVectoredExceptionHandler(1, mobileCrashTrace);
     OutputDebugStringA("Joey Online: integrated cloud networking enabled\n");
 }
 FARPROC inputProc(const char* name) { std::call_once(started, initialize); return realInput ? GetProcAddress(realInput, name) : nullptr; }
