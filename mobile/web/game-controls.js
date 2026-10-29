@@ -13,7 +13,7 @@
   else{canvas.focus();window._boxedwineEmscriptenMouseButton(type==='mousedown'?1:0,button===2?1:0,gx,gy);}
  };
  const touch=(type,handler)=>document.addEventListener(type,event=>{if(event.target!==canvas)return;event.preventDefault();event.stopImmediatePropagation();handler(event);},{capture:true,passive:false});
- touch('touchstart',event=>{if(active!==null)return;const point=event.changedTouches[0];active=point.identifier;pressedAt=performance.now();button=window.joeyRightClick?2:0;send('mousemove',point.clientX,point.clientY);send('mousedown',point.clientX,point.clientY);});
+ touch('touchstart',event=>{if(active!==null)return;const point=event.changedTouches[0];active=point.identifier;pressedAt=performance.now();button=window.joeyRightClick?2:0;canvas.focus();window.dispatchEvent(new FocusEvent('focus'));canvas.dispatchEvent(new MouseEvent('mouseenter',{clientX:point.clientX,clientY:point.clientY,view:window}));send('mousemove',point.clientX,point.clientY);send('mousedown',point.clientX,point.clientY);});
  touch('touchmove',event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(point)send('mousemove',point.clientX,point.clientY);});
  const release=event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(!point)return;const x=point.clientX,y=point.clientY;setTimeout(()=>{send('mouseup',x,y);active=null;if(window.joeyRightClick){window.joeyRightClick=false;parent.postMessage({type:'joey-right-used'},location.origin);}},Math.max(0,500-(performance.now()-pressedAt)));};
  touch('touchend',release);touch('touchcancel',release);
