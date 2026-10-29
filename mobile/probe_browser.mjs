@@ -19,13 +19,14 @@ const browser=await chromium.launch({headless:true,args:['--enable-unsafe-swifts
 const page=await browser.newPage({viewport:{width:1000,height:760}});
 let lines=[];let errors=[];
 page.on('console',m=>{lines.push(m.text()); if(lines.length%100===0) console.log(lines.slice(-3).join('\n'));});
-page.on('pageerror',e=>{errors.push(String(e));console.error('Page error:',String(e));});
+page.on('pageerror',e=>{errors.push(e.stack||String(e));console.error('Page error:',e.stack||String(e));});
 page.on('crash',()=>errors.push('Browser page crashed'));
 try{
- const params=new URLSearchParams({root:'runtime',app:'game',overlay:'online',p:'joey/joey_pc.exe',w:'c:/files/joey',registry:'gdi,win10,mousewarp-disable','wine-override':'nomono',env:'"WINEDLLOVERRIDES:dinput=n,b;mscoree,mshtml="','auto':'false',storage:'memory'});
+ const params=new URLSearchParams({root:'runtime',app:'game',overlay:'online',p:'joey/joey_pc.exe',w:'c:/files/joey',registry:'gdi,win10,mousewarp-disable','wine-override':'nomono','auto':'false',storage:'memory'});
  await page.goto('http://127.0.0.1:8765/boxedwine.html?'+params,{waitUntil:'domcontentloaded',timeout:60000});
  console.log('Controls:',await page.locator('button,input[type=button]').allTextContents());
- await page.locator('#startbtn').waitFor({state:'visible',timeout:180000});
+ const readyUntil=Date.now()+180000;
+ while(!(await page.locator('#startbtn').isVisible())&&Date.now()<readyUntil){if(errors.length)throw new Error(errors.join('\n'));await new Promise(r=>setTimeout(r,1000));}
  await page.locator('#startbtn').click();
  const until=Date.now()+12*60*1000;
  while(Date.now()<until){

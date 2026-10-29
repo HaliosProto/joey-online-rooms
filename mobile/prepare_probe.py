@@ -27,6 +27,11 @@ root=fetch('https://boxedwine.org/v2/23/TinyCore15Wine11.0-web.zip','runtime.zip
 game=fetch('https://github.com/HaliosProto/joey-online-rooms/releases/download/full-game-preview-2/Joey-the-Passion-Online-Full-Game.zip','game.zip','f41c3e7203f7f1246c19c14f0abbbf4a23d687d2ed19c6738d7c1081cb747267')
 for source in a.engine.iterdir():
     if source.is_file(): shutil.copyfile(source,a.output/source.name)
+shell=a.output/'boxedwine-shell.js'
+text=shell.read_text()
+text=text.replace('Config.envProp = getEnvProp();', 'Config.envProp = "WINEDLLOVERRIDES=dinput=n,b;mscoree,mshtml=";')
+text=text.replace('let params = ["-root", ROOT];', 'let params = ["-root", ROOT, "-env", "WINEDEBUG=+debugstr"];')
+shell.write_text(text)
 shutil.copyfile(root,a.output/'runtime.zip')
 with zipfile.ZipFile(root) as z:
     candidates=[n for n in z.namelist() if n.endswith('/dinput.dll')]

@@ -34,6 +34,12 @@ globalThis.createJoeyRoomTransport = function (api, endpoint, platform = globalT
     enqueue(s, enc.encode(`HTTP/1.1 ${status}\r\nContent-Type: application/octet-stream\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n`));
     enqueue(s, body); s.closed = true; events(s);
   }
+  function finishWebSocket(s, code) {
+    if (s.closeQueued) return;
+    s.closeQueued = true;
+    const bytes = new Uint8Array(2); new DataView(bytes.buffer).setUint16(0, code);
+    enqueue(s, frame(8, bytes)); s.closed = true; events(s);
+  }
   async function upgrade(s, path, headers) {
     const key = headers.get('sec-websocket-key');
     if (!key || !/^[a-zA-Z0-9+/]{22}==$/.test(key)) throw new Error('Invalid virtual WebSocket key');
@@ -60,12 +66,11 @@ globalThis.createJoeyRoomTransport = function (api, endpoint, platform = globalT
       if (!(event.data instanceof ArrayBuffer) || event.data.byteLength > MAX) { fail(s); return; }
       enqueue(s, frame(2, new Uint8Array(event.data)));
     };
-    ws.onerror = () => { if (!opened && sockets.has(s.id)) response(s, '502 Bad Gateway'); else fail(s); };
+    ws.onerror = () => { if (s.closeQueued) return; if (!opened && sockets.has(s.id)) response(s, '502 Bad Gateway'); else fail(s); };
     ws.onclose = event => {
       if (!sockets.has(s.id)) return;
       if (!opened) { response(s, '502 Bad Gateway'); return; }
-      const bytes = new Uint8Array(2); new DataView(bytes.buffer).setUint16(0, event.wasClean ? 1000 : 1011);
-      enqueue(s, frame(8, bytes)); s.closed = true; events(s);
+      finishWebSocket(s, event.wasClean ? 1000 : 1011);
     };
   }
   async function request(s, method, path, headers, body) {
@@ -129,7 +134,11 @@ globalThis.createJoeyRoomTransport = function (api, endpoint, platform = globalT
         s.tx = a.slice(at + 4 + n);
         const op = a[0] & 15, final = !!(a[0] & 128);
         if (op >= 8 && (!final || n > 125)) throw new Error('Invalid control frame');
-        if (op === 8) { s.ws.close(1000); s.outClosed = true; events(s); return; }
+        if (op === 8) {
+          // This facade terminates the virtual connection; the browser owns
+          // the upstream close handshake and may finish it asynchronously.
+          s.ws.close(1000); s.outClosed = true; finishWebSocket(s, 1000); return;
+        }
         if (op === 9) { enqueue(s, frame(10, bytes)); continue; }
         if (op === 10) continue;
         if ((op !== 2 && op !== 0) || (op === 0) !== !!s.fragments.length) throw new Error('Unsupported data frame');
