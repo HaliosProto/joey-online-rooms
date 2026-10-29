@@ -57,3 +57,10 @@ The native Windows test executable running *inside the browser emulator* passed 
 The Android app builds with Java 17, Gradle 8.11.1 and Android Gradle Plugin 8.9.2. Android lint and APK signature validation passed in cloud run https://github.com/HaliosProto/joey-online-rooms/actions/runs/40940364190. The signing key is kept in encrypted GitHub secrets, with a Windows-user-encrypted backup excluded from Git. The APK is a small WebView launcher for the same locally executed browser game; its first launch needs the game download.
 
 Mobile preview limits: performance and memory use on physical Android/iPhone devices, audio quality, real-game save/load, complete in-game duels and rendered room/provider dialogs still require qualification. The Home Screen app does not use an iOS signing certificate. No paid cloud billing or local game server is enabled.
+
+
+The signed Android installer downloaded and cached the game and launched the original executable with its multiplayer hook in a clean Android 15 cloud emulator in https://github.com/HaliosProto/joey-online-rooms/actions/runs/40947239326. The system fullscreen tutorial and the cloud emulator's DNS/startup configuration are handled by the test harness. The resulting screenshot shows the original main menu. This does not replace physical-phone qualification.
+
+The actual published HTTPS mobile site passed native Windows peer checks *inside its browser emulator* against the production Cloudflare service in https://github.com/HaliosProto/joey-online-rooms/actions/runs/40949079115. This covers creation/discovery, joining, cancellation, idle heartbeat, player/session metadata, capacity, exact bidirectional binary payloads and disconnect. It verifies the real browser Origin/CORS and WebSocket authorization path.
+
+The menu-input check waits for the original animated title/menu to become stable after dismissing the demonstration. It then requires the rendered lower menu to change after a touch while the upper game logo remains unchanged. Native event delivery alone does not qualify menu navigation.
