@@ -44,3 +44,16 @@ The checks build and ad-hoc sign the actual Mac app; verify the pinned Windows Z
 The Mac prefix preserves Wine's original input module under a separate name and installs the companion at Wine's absolute DirectInput system path. A Wine-only WebSocket close handshake wakes pending synchronous reads, which otherwise hang when leaving a room. The published Windows package is unchanged.
 
 A complete duel, the rendered provider/room menus, audio quality, and real game save/load remain unverified. macOS versions other than 15 and the first-install Rosetta/Gatekeeper prompts on a fresh personal Mac have not been exercised. The Mac app is ad-hoc signed, not Developer ID signed or Apple-notarized. Wine downloads directly from its upstream release at first launch; it is not redistributed inside the Mac ZIP.
+
+
+## Mobile qualification
+
+The browser runtime is built from BoxedWine commit `8790ff20428c22daa64368af9553417e4f499c94`, using Emscripten 6.0.13 and the single-thread WebAssembly JIT with legacy WebAssembly exception handling. It uses the verified TinyCore15Wine11.0-web filesystem and unmodified original game executable. Exact input files and checksums are in `mobile/prepare_probe.py`.
+
+Original-game startup and multiplayer-hook activation passed in Chromium in cloud run https://github.com/HaliosProto/joey-online-rooms/actions/runs/40939175466 and in WebKit in https://github.com/HaliosProto/joey-online-rooms/actions/runs/40939979131. Screenshots show the original game's main menu. Linux WebKit is an engine compatibility check, not a physical iPhone or iOS simulator test.
+
+The native Windows test executable running *inside the browser emulator* passed the room creation, discovery, cancellation, joining, idle heartbeat, identity/session metadata, capacity, bidirectional binary relay and disconnect checks against an isolated Worker in cloud run https://github.com/HaliosProto/joey-online-rooms/actions/runs/40940794205. A separate browser transport test passed against the live HTTPS/WSS production service. Browser authentication/CORS changes and existing native interoperability passed cloud run https://github.com/HaliosProto/joey-online-rooms/actions/runs/40936301551 before deployment.
+
+The Android app builds with Java 17, Gradle 8.11.1 and Android Gradle Plugin 8.9.2. Android lint and APK signature validation passed in cloud run https://github.com/HaliosProto/joey-online-rooms/actions/runs/40940364190. The signing key is kept in encrypted GitHub secrets, with a Windows-user-encrypted backup excluded from Git. The APK is a small WebView launcher for the same locally executed browser game; its first launch needs the game download.
+
+Mobile preview limits: performance and memory use on physical Android/iPhone devices, audio quality, real-game save/load, complete in-game duels and rendered room/provider dialogs still require qualification. The Home Screen app does not use an iOS signing certificate. No paid cloud billing or local game server is enabled.

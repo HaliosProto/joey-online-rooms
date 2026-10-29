@@ -1,4 +1,4 @@
-// Input stays inside the local game frame; no native application bridge is exposed.
+// Input stays inside the game frame. Android save export opens the system file picker.
 (()=>{
  const canvas=document.getElementById('canvas');let active=null,button=0,pressedAt=0;
  const send=(type,x,y)=>canvas.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,button,buttons:type==='mouseup'?0:button===2?2:1,view:window}));
@@ -9,5 +9,14 @@
  touch('touchend',release);touch('touchcancel',release);
  window.joeyKey=(key,code,keyCode)=>{canvas.focus();const opts={bubbles:true,cancelable:true,key,code,keyCode,which:keyCode};document.dispatchEvent(new KeyboardEvent('keydown',opts));setTimeout(()=>document.dispatchEvent(new KeyboardEvent('keyup',opts)),80);};
  window.joeyType=character=>{canvas.focus();document.dispatchEvent(new KeyboardEvent('keypress',{bubbles:true,cancelable:true,key:character,charCode:character.codePointAt(0),keyCode:character.codePointAt(0),which:character.codePointAt(0)}));};
+ const originalDownload=window.downloadBlob;
+ window.downloadBlob=async function(blob,filename){
+  if(typeof parent.JoeySaveExport?.save==='function'){
+   if(blob.size>24*1024*1024){alert('This backup is too large for Android export.');return;}
+   const reader=new FileReader();reader.onload=()=>parent.JoeySaveExport.save(String(reader.result).split(',')[1]);reader.readAsDataURL(blob);
+  }else if(navigator.canShare?.({files:[new File([blob],filename,{type:'application/zip'})]})){
+   try{await navigator.share({files:[new File([blob],filename,{type:'application/zip'})]});}catch(error){if(error.name!=='AbortError')originalDownload(blob,filename);}
+  }else originalDownload(blob,filename);
+ };
  const originalPrint=Module.print;Module.print=function(...args){originalPrint?.(...args);const text=args.join(' ');if(text.includes('integrated cloud networking enabled'))parent.postMessage({type:'joey-status',text:'Tap to click / drag cards / Right click for the next tap'},location.origin);};
 })();

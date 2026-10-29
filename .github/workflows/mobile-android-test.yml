@@ -1,0 +1,45 @@
+name: Exercise Android preview in cloud emulator
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mobile-android
+          path: android-installer
+          run-id: ${{ inputs.build_run }}
+          github-token: ${{ github.token }}
+      - name: Prepare official Android 15 emulator
+        run: |
+          sudo chmod 666 /dev/kvm
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'system-images;android-35;google_apis;x86_64'
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force -n joey -k 'system-images;android-35;google_apis;x86_64'
+          "$ANDROID_HOME/emulator/emulator" -avd joey -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 3072 > /tmp/joey-emulator.log 2>&1 &
+          adb wait-for-device
+          for i in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = '1' ]; then break; fi
+            sleep 2
+          done
+          adb shell input keyevent 82
+          adb shell settings put system accelerometer_rotation 0
+          adb shell settings put system user_rotation 1
+          adb install android-installer/Joey-Online-Android.apk
+      - name: Download and start the actual game in Android WebView
+        run: python3 mobile/test_android.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: android-device-test-results
+          path: android-test-results/
+          retention-days: 7

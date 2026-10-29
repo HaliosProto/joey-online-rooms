@@ -16,6 +16,14 @@ Download **Joey-Online-Mac.zip**, extract it, move **Joey Online.app** to Applic
 
 Mac and Windows players use the same online room service. Saves and the Mac runtime stay in `~/Library/Application Support/Joey Online/`. The existing Windows download stays available unchanged.
 
+**Mobile preview (Android and iPhone / iPad):**
+
+https://haliosproto.github.io/joey-online-rooms/
+
+On iPhone or iPad, open the link in Safari, tap **Share → Add to Home Screen**, then launch the new icon. No App Store account, signing renewal or paid service is required. Android can use the same Home Screen app or the signed APK in the mobile release. The first game download is approximately 573 MB; use Wi-Fi. The original game runs locally through BoxedWine, with touch controls and the same online room service as desktop players. It is not streamed from a PC.
+
+Tap to click, drag to move cards, and use **Right click** for the next tap. **Back** sends Escape, **Enter** confirms, and **Name** types into the selected game text field. Turn the phone sideways. Saves are kept in this browser/app's private storage; save in game and export **Save backup** before removing browser data. Clearing storage or uninstalling can erase local progress. This is a compatibility preview: physical phones and a complete duel have not been qualified.
+
 **Windows multiplayer-only download for an existing game copy:**
 https://github.com/HaliosProto/joey-online-rooms/releases/tag/preview-2
 
@@ -30,7 +38,7 @@ https://joey-online-rooms.joey-online-rooms.workers.dev
 
 Cloud-based tests passed against the live HTTPS service, including native Windows clients and Wine clients on Intel and Apple Silicon Macs. They cover room discovery/creation, two-player joins, capacity, sender identities, session configuration, isolated bidirectional binary relay, nonblocking search cancellation, idle connections and disconnect cleanup. Native builds treat compiler warnings as errors.
 
-This remains a preview: a complete duel in the original game and the rendered in-game menus have not been verified. Some screens may retain their original LAN wording. Background transport checks do not establish that a full duel finishes correctly. See TESTING.md for exact evidence.
+This remains a preview: original-game startup and the mobile main menu render in Chromium and WebKit; a complete duel and the rendered provider/room menus have not been verified. Some screens may retain their original LAN wording. Background transport checks do not establish that a full duel finishes correctly. See TESTING.md for exact evidence.
 
 ## Implementation
 
@@ -45,6 +53,7 @@ The directory admits at most 20 new rooms per minute and 100 live/reserved rooms
 - cloud/: Worker, directory, duel relays and protocol/service tests.
 - native/: native companion, reversible installer and console-only client checks.
 - macos/: Mac launcher, isolated runtime setup, packaging and cloud Mac qualification.
+- mobile/: Android installer, iPhone Home Screen app, browser socket transport and reproducible cloud runtime builds.
 - .github/workflows/: standard GitHub Windows and Mac cloud builds and release verification.
 - cloud/DEPLOY.md: free-cloud deployment procedure.
 

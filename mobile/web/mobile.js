@@ -12,7 +12,7 @@ async function prepare(){
   const total=manifest.reduce((sum,x)=>sum+x.bytes,0);let done=0;
   const estimate=await navigator.storage?.estimate?.();
   if(estimate?.quota && estimate.quota-estimate.usage<total*1.2)message.textContent='Storage is low. Free about 1 GB if the download fails.';
-  await navigator.storage?.persist?.();const cache=await caches.open(CACHE);
+  await navigator.storage?.persist?.().catch(()=>false);const cache=await caches.open(CACHE);
   for(const asset of manifest){
    const url=new URL(asset.path,location.href);const existing=await cache.match(url);
    if(existing){done+=asset.bytes;progress.value=done/total;continue;}
