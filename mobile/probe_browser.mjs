@@ -26,6 +26,7 @@ try{
  const check=process.env.MOBILE_CHECK==='network';
  const params=new URLSearchParams({root:'runtime',app:'game',p:check?'check-network.bat':'start-game.bat',w:'c:/files/joey','wine-override':'nomono','auto':'false',storage:'memory'});
  await page.goto('http://127.0.0.1:8765/boxedwine.html?'+params,{waitUntil:'domcontentloaded',timeout:60000});
+ if(process.env.TEST_SERVER)await page.evaluate(url=>{Module['joeyCloudOrigin']=url;},process.env.TEST_SERVER);
  console.log('Controls:',await page.locator('button,input[type=button]').allTextContents());
  const readyUntil=Date.now()+180000;
  while(!(await page.locator('#startbtn').isVisible())&&Date.now()<readyUntil){if(errors.length)throw new Error(errors.join('\n'));await new Promise(r=>setTimeout(r,1000));}
