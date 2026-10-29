@@ -1,13 +1,13 @@
 // Input stays inside the game frame. Android save export opens the system file picker.
 (()=>{
- const canvas=document.getElementById('canvas');let active=null,button=0,pressedAt=0;
+ const canvas=document.getElementById('canvas');let active=null,button=0,pressedAt=0,pressed=false,released=false,pressTimer=null,firstPoint=null,lastPoint=null;
  // Call the emulator's input entry points directly so browser focus changes cannot
  // release a synthetic mouse press before the guest game polls it.
  const send=(type,x,y)=>{
   const present=document.getElementById('boxedwine-webgl-canvas-0');const style=present&&getComputedStyle(present);
   const target=present&&present.width&&style.display!=='none'&&style.visibility!=='hidden'?present:canvas;const rect=target.getBoundingClientRect();
   if(!rect.width||typeof window._boxedwineEmscriptenMouseButton!=='function')return;
-  const gx=Math.max(0,Math.min(target.width-1,Math.round((x-rect.left)*target.width/rect.width))),gy=Math.max(0,Math.min(target.height-1,Math.round((y-rect.top)*target.height/rect.height)));
+  const gx=Math.max(0,Math.min(target.width-1,Math.round((Math.trunc(x)-rect.left)*target.width/rect.width))),gy=Math.max(0,Math.min(target.height-1,Math.round((Math.trunc(y)-rect.top)*target.height/rect.height)));
   window._boxedwineEmscriptenPointerLock(0);
   if(type==='mousemove')window._boxedwineEmscriptenMouseMove(gx,gy);
   else{canvas.focus();window._boxedwineEmscriptenMouseButton(type==='mousedown'?1:0,button===2?1:0,gx,gy);}
@@ -16,10 +16,16 @@
  for(const type of ['focus','blur'])window.addEventListener(type,()=>window.joeyFocusTrace.push({type,time:performance.now()}),true);
  canvas.addEventListener('mouseleave',event=>{window.joeyFocusTrace.push({type:'mouseleave',active:active!==null,time:performance.now()});if(active!==null){event.preventDefault();event.stopImmediatePropagation();}},{capture:true});
  const touch=(type,handler)=>document.addEventListener(type,event=>{if(event.target!==canvas)return;event.preventDefault();event.stopImmediatePropagation();handler(event);},{capture:true,passive:false});
- touch('touchstart',event=>{if(active!==null)return;const point=event.changedTouches[0];active=point.identifier;pressedAt=performance.now();button=window.joeyRightClick?2:0;canvas.focus();window.dispatchEvent(new FocusEvent('focus'));canvas.dispatchEvent(new MouseEvent('mouseenter',{clientX:point.clientX,clientY:point.clientY,view:window}));send('mousemove',point.clientX,point.clientY);send('mousedown',point.clientX,point.clientY);});
- touch('touchmove',event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(point)send('mousemove',point.clientX,point.clientY);});
- const release=event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(!point)return;const x=point.clientX,y=point.clientY;setTimeout(()=>{send('mouseup',x,y);active=null;if(window.joeyRightClick){window.joeyRightClick=false;parent.postMessage({type:'joey-right-used'},location.origin);}},Math.max(0,500-(performance.now()-pressedAt)));};
- touch('touchend',release);touch('touchcancel',release);
+ const finishRelease=()=>setTimeout(()=>{send('mouseup',lastPoint.x,lastPoint.y);active=null;pressed=false;if(window.joeyRightClick){window.joeyRightClick=false;parent.postMessage({type:'joey-right-used'},location.origin);}},Math.max(0,500-(performance.now()-pressedAt)));
+ touch('touchstart',event=>{
+  if(active!==null)return;const point=event.changedTouches[0];active=point.identifier;pressed=false;released=false;button=window.joeyRightClick?2:0;firstPoint=lastPoint={x:point.clientX,y:point.clientY};
+  canvas.focus();window.dispatchEvent(new FocusEvent('focus'));canvas.dispatchEvent(new MouseEvent('mouseenter',{clientX:point.clientX,clientY:point.clientY,view:window}));send('mousemove',point.clientX,point.clientY);
+  // Wine must process window/mouse focus before DirectInput receives the press.
+  pressTimer=setTimeout(()=>{send('mousedown',firstPoint.x,firstPoint.y);send('mousemove',lastPoint.x,lastPoint.y);pressedAt=performance.now();pressed=true;if(released)finishRelease();},150);
+ });
+ touch('touchmove',event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(point){lastPoint={x:point.clientX,y:point.clientY};if(pressed)send('mousemove',point.clientX,point.clientY);}});
+ touch('touchend',event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(!point)return;lastPoint={x:point.clientX,y:point.clientY};released=true;if(pressed)finishRelease();});
+ touch('touchcancel',()=>{clearTimeout(pressTimer);if(pressed)send('mouseup',lastPoint.x,lastPoint.y);active=null;pressed=false;});
  window.joeyKey=(key,code,keyCode)=>{canvas.focus();const opts={bubbles:true,cancelable:true,key,code,keyCode,which:keyCode};document.dispatchEvent(new KeyboardEvent('keydown',opts));setTimeout(()=>document.dispatchEvent(new KeyboardEvent('keyup',opts)),80);};
  let typing=Promise.resolve();
  window.joeyTypeText=text=>{typing=typing.then(async()=>{for(const key of text){
