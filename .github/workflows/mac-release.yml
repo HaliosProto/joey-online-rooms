@@ -1,0 +1,81 @@
+name: Build Mac game preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - shell: pwsh
+        run: ./native/Build.ps1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mac-native-check
+          path: native/build/native-check.exe
+          retention-days: 2
+  mac:
+    needs: native
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15-intel, macos-15]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mac-native-check
+          path: native-check
+      - name: Download original verified Windows release
+        run: |
+          curl --fail --location --retry 3 --proto '=https' --proto-redir '=https' 'https://github.com/HaliosProto/joey-online-rooms/releases/download/full-game-preview-2/Joey-the-Passion-Online-Full-Game.zip' -o game.zip
+      - name: Build and sign Mac application locally
+        run: |
+          /bin/bash -n macos/bootstrap.sh
+          python3 macos/build_app.py --game-zip game.zip --output mac-package
+      - name: Test Mac launcher and live online rooms
+        run: python3 macos/test_app.py 'mac-package/Joey Online.app' native-check/native-check.exe
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: mac-tests-${{ matrix.runner }}
+          path: |
+            mac-test-results/*.txt
+            mac-test-results/*.png
+          retention-days: 7
+      - name: Package Mac download
+        if: matrix.runner == 'macos-15-intel'
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent mac-package Joey-Online-Mac.zip
+          shasum -a 256 Joey-Online-Mac.zip > Joey-Online-Mac.sha256
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: matrix.runner == 'macos-15-intel'
+        with:
+          name: mac-game-download
+          path: |
+            Joey-Online-Mac.zip
+            Joey-Online-Mac.sha256
+          retention-days: 2
+  release:
+    needs: mac
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mac-game-download
+          path: package
+      - name: Create separate draft Mac release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd package
+          sha256sum -c Joey-Online-Mac.sha256
+          gh release create mac-preview-1 Joey-Online-Mac.zip Joey-Online-Mac.sha256 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease --title 'Mac game + online multiplayer preview' --notes-file ../macos/release-notes.md
