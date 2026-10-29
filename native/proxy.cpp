@@ -24,7 +24,11 @@ HRESULT WINAPI onlineCreate(REFCLSID clsid, LPUNKNOWN outer, DWORD context, REFI
 void initialize() {
     wchar_t system[MAX_PATH]{};
     if (!GetSystemDirectoryW(system, MAX_PATH)) return;
-    const std::wstring input = std::wstring(system) + L"\\dinput.dll";
+    // Wine's COM loader resolves DirectInput to an absolute system path.
+    // The Mac launcher preserves Wine's real input module under a separate name
+    // before placing this proxy in its isolated prefix; Windows keeps its usual DLL.
+    const bool wine = GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "wine_get_version") != nullptr;
+    const std::wstring input = std::wstring(system) + (wine ? L"\\joey-system-dinput.dll" : L"\\dinput.dll");
     realInput = LoadLibraryExW(input.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
     wchar_t filename[MAX_PATH]{}; GetModuleFileNameW(moduleHandle, filename, MAX_PATH);

@@ -66,6 +66,17 @@ if [[ ! -f "$support/.prefix-initialized" ]]; then
   "$wine" reg add 'HKLM\Software\KONAMI\Yu-Gi-Oh! Power Of Chaos' /v CommonDir /t REG_SZ /d "$commonwin" /f /reg:32
   touch "$support/.prefix-initialized"
 fi
+# The game loads DirectInput from an absolute system path under Wine. Preserve
+# the genuine Wine module, then install our proxy only inside this private prefix.
+# install + mv also avoids writing through Wine's generated symlinks/hardlinks.
+system32="$WINEPREFIX/drive_c/windows/syswow64"
+realinput="$engine/Wine Devel.app/Contents/Resources/wine/lib/wine/i386-windows/dinput.dll"
+[[ -f "$realinput" ]]
+/usr/bin/install -m 644 "$realinput" "$system32/joey-system-dinput.dll.new"
+mv -f "$system32/joey-system-dinput.dll.new" "$system32/joey-system-dinput.dll"
+/usr/bin/install -m 644 "$game/dinput.dll" "$system32/dinput.dll.new"
+mv -f "$system32/dinput.dll.new" "$system32/dinput.dll"
+/usr/bin/install -m 644 "$game/joey-online.ini" "$system32/joey-online.ini"
 # A windowed desktop avoids forcing the Mac display to the game's old resolution.
 "$wine" reg add 'HKCU\Software\Wine\Explorer\Desktops' /v JoeyOnline /t REG_SZ /d 1024x768 /f
 "$wine" reg add 'HKCU\Software\Wine\Drivers' /v Audio /t REG_SZ /d coreaudio /f

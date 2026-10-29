@@ -14,7 +14,9 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: mac-native-check
-          path: native/build/native-check.exe
+          path: |
+            native/build/native-check.exe
+            native/build/dinput.dll
           retention-days: 2
   mac:
     needs: native
@@ -36,7 +38,7 @@ jobs:
       - name: Build and sign Mac application locally
         run: |
           /bin/bash -n macos/bootstrap.sh
-          python3 macos/build_app.py --game-zip game.zip --output mac-package
+          python3 macos/build_app.py --game-zip game.zip --module native-check/dinput.dll --output mac-package
       - name: Test Mac launcher and live online rooms
         run: python3 macos/test_app.py 'mac-package/Joey Online.app' native-check/native-check.exe
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

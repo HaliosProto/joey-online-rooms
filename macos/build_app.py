@@ -10,6 +10,7 @@ import zipfile
 parser = argparse.ArgumentParser()
 parser.add_argument('--game-zip', type=Path, required=True)
 parser.add_argument('--output', type=Path, required=True)
+parser.add_argument('--module', type=Path, required=True)
 args = parser.parse_args()
 project = Path(__file__).resolve().parents[1]
 if hashlib.file_digest(args.game_zip.open('rb'), 'sha256').hexdigest() != 'f41c3e7203f7f1246c19c14f0abbbf4a23d687d2ed19c6738d7c1081cb747267':
@@ -24,6 +25,12 @@ with zipfile.ZipFile(args.game_zip) as archive:
     archive.extractall(args.output / 'extracted')
 shutil.move(str(args.output / 'extracted' / 'Yu-Gi-Oh! Power of Chaos JOEY THE PASSION'), resources / 'Game')
 (args.output / 'extracted').rmdir()
+# Only the Mac companion changes; original game files retain their release hashes.
+shutil.copyfile(args.module, resources / 'Game' / 'dinput.dll')
+checksums = resources / 'Game' / 'SHA256SUMS.txt'
+module_hash = hashlib.file_digest(args.module.open('rb'), 'sha256').hexdigest()
+lines = checksums.read_text().splitlines()
+checksums.write_text(''.join((module_hash + '  dinput.dll' if line.endswith('  dinput.dll') else line) + '\n' for line in lines))
 for name in ['bootstrap.sh', 'README-MAC.txt']:
     shutil.copyfile(project / 'macos' / name, resources / name)
 (resources / 'bootstrap.sh').chmod(0o755)
