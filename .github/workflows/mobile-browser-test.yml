@@ -1,6 +1,18 @@
 name: Test cached mobile browser runtime
 on:
   workflow_dispatch:
+    inputs:
+      engine_run:
+        type: string
+        default: "40939175466"
+      browser:
+        type: choice
+        options: [chromium, webkit]
+        default: chromium
+      check:
+        type: choice
+        options: [game, network]
+        default: game
 permissions:
   contents: read
   actions: read
@@ -14,21 +26,24 @@ jobs:
         with:
           name: mobile-browser-runtime
           path: browser-runtime
-          run-id: 40932817574
+          run-id: ${{ inputs.engine_run }}
           github-token: ${{ github.token }}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: mobile-native
           path: mobile-native
-          run-id: 40932817574
+          run-id: ${{ inputs.engine_run }}
           github-token: ${{ github.token }}
       - name: Prepare verified game files
         run: python3 mobile/prepare_probe.py --engine browser-runtime --native mobile-native --output mobile-web
       - name: Install cloud browser tooling
         run: |
           npm install --no-save playwright@1.56.1
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps ${{ inputs.browser }}
       - name: Exercise the original game in the browser
+        env:
+          MOBILE_BROWSER: ${{ inputs.browser }}
+          MOBILE_CHECK: ${{ inputs.check }}
         run: node mobile/probe_browser.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

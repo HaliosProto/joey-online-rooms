@@ -1,0 +1,19 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.haliosproto.joeyonline'
+    compileSdk 35
+    defaultConfig { applicationId 'com.haliosproto.joeyonline'; minSdk 26; targetSdk 35; versionCode 1; versionName '0.3.0-preview' }
+    signingConfigs {
+        release {
+            if (System.getenv('JOEY_KEYSTORE_FILE')) {
+                storeFile file(System.getenv('JOEY_KEYSTORE_FILE'))
+                storePassword System.getenv('JOEY_KEYSTORE_PASSWORD')
+                keyAlias 'joey-online'
+                keyPassword System.getenv('JOEY_KEYSTORE_PASSWORD')
+                storeType 'PKCS12'
+            }
+        }
+    }
+    buildTypes { release { signingConfig signingConfigs.release; minifyEnabled false } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}

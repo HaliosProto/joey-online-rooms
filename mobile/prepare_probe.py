@@ -67,6 +67,7 @@ with zipfile.ZipFile(game) as incoming,zipfile.ZipFile(a.output/'game.zip','w',c
         else: data=incoming.read(entry)
         outgoing.writestr('joey/'+name,data)
     outgoing.writestr('joey/start-game.bat',startup.replace('\n','\r\n'))
+    outgoing.writestr('joey/check-network.bat',startup.replace('joey_pc.exe','native-check.exe http://127.0.0.1:80 --check-input').replace('\n','\r\n'))
     outgoing.write(a.native/'native-check.exe','joey/native-check.exe')
     outgoing.writestr('joey/joey-system-dinput.dll',real_input)
 with zipfile.ZipFile(a.output/'online.zip','w',compression=zipfile.ZIP_DEFLATED) as outgoing:
