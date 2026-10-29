@@ -1,0 +1,30 @@
+name: Attach mobile runtime source archives
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: danoon2/Boxedwine
+          ref: 8790ff20428c22daa64368af9553417e4f499c94
+          path: boxedwine
+      - name: Preserve exact modified emulator source and Wine build patches
+        run: |
+          python3 mobile/patch_engine.py boxedwine
+          tar --exclude='.git' -czf Joey-Mobile-BoxedWine-Source.tar.gz boxedwine mobile/patch_engine.py mobile/room-transport.js mobile/prepare_probe.py mobile/prepare_site.py
+          curl --fail --location --retry 3 https://codeload.github.com/wine-mirror/wine/tar.gz/db11d0fe6a169c457e23d007e20404643d067aa8 --output Joey-Mobile-Wine-Source.tar.gz
+          python3 -c "import tarfile; t=tarfile.open('Joey-Mobile-Wine-Source.tar.gz'); assert any(n.endswith('/COPYING.LIB') for n in t.getnames())"
+          sha256sum Joey-Mobile-*-Source.tar.gz > Joey-Mobile-Runtime-Sources.sha256
+      - name: Upload sources beside the mobile release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/upload_release_asset.py --repo HaliosProto/joey-online-rooms --tag mobile-preview-1 --release-id 428323208 --file Joey-Mobile-BoxedWine-Source.tar.gz --bytes-per-second 20971520
+          python3 tools/upload_release_asset.py --repo HaliosProto/joey-online-rooms --tag mobile-preview-1 --release-id 428323208 --file Joey-Mobile-Wine-Source.tar.gz --bytes-per-second 20971520
+          python3 tools/upload_release_asset.py --repo HaliosProto/joey-online-rooms --tag mobile-preview-1 --release-id 428323208 --file Joey-Mobile-Runtime-Sources.sha256 --bytes-per-second 20971520
