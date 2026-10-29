@@ -3,7 +3,7 @@ JOEY ONLINE FOR MAC - PREVIEW
 1. Extract this ZIP and move Joey Online.app to Applications.
 2. Open Joey Online.app. On Apple Silicon (M1/M2/M3/M4 and newer), allow
    Apple's Rosetta installation if macOS asks. Rosetta is free.
-3. First launch downloads and verifies Wine 11.20 11.20 (226 MB) from its
+3. First launch downloads and verifies Wine 11.20 (226 MB) from its
    upstream release. No Homebrew, Windows license or paid app is required.
 4. Open the game's two-player/LAN option and choose Online rooms. Create
    a room or join your friend. Windows friends use the existing Windows ZIP.

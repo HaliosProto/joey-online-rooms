@@ -71,7 +71,9 @@ fi
 "$wine" reg add 'HKCU\Software\Wine\Drivers' /v Audio /t REG_SZ /d coreaudio /f
 cd "$game"
 trap '"$wineserver" -k || true' TERM INT
-if [[ "${1:-}" == '--transport-check' ]]; then
+if [[ "${1:-}" == '--prepare-only' ]]; then
+  status 'Game environment ready.'
+elif [[ "${1:-}" == '--transport-check' ]]; then
   status 'Checking public online rooms...'
   "$wine" "${2:?Transport check executable required}" 'https://joey-online-rooms.joey-online-rooms.workers.dev'
 else

@@ -51,7 +51,9 @@ int wmain(int argc, wchar_t** argv) {
         DPN_APPLICATION_DESC description{}; description.dwSize = sizeof(description); description.dwMaxPlayers = 2;
         CoCreateGuid(&description.guidApplication); description.pwszSessionName = const_cast<wchar_t*>(L"Headless validation");
         joey::Bytes applicationData{0,255,128,42}; description.pvApplicationReservedData = applicationData.data(); description.dwApplicationReservedDataSize = static_cast<DWORD>(applicationData.size());
+        std::cerr << "CHECK: creating live room\n";
         okay(host.Host(&description, nullptr, 0, nullptr, nullptr, nullptr, 0), "Cloud hosting failed");
+        std::cerr << "CHECK: discovering live room\n";
         guestEvents.blockDiscovery = true;
         DPNHANDLE discovery = 0;
         okay(guest.EnumHosts(&description, nullptr, nullptr, nullptr, 0, 1, 0, 0, nullptr, &discovery, 0), "Asynchronous discovery failed");
@@ -62,6 +64,7 @@ int wmain(int argc, wchar_t** argv) {
         { std::unique_lock<std::mutex> lock(guestEvents.mutex); guestEvents.releaseDiscovery = true; guestEvents.changed.notify_all(); require(guestEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return !guestEvents.blockDiscovery;}), "Discovery callback did not finish"); }
         okay(guest.EnumHosts(&description, nullptr, nullptr, nullptr, 0, 1, 0, 0, nullptr, nullptr, DPNENUMHOSTS_SYNC), "Room discovery failed");
         require(guestEvents.address != nullptr, "Hosted room was not listed");
+        std::cerr << "CHECK: joining live room\n";
         okay(guest.Connect(&description, guestEvents.address, nullptr, nullptr, nullptr, nullptr, 0, nullptr, nullptr, nullptr, 0), "Cloud join failed");
         {
             std::unique_lock<std::mutex> lock(hostEvents.mutex);
@@ -74,6 +77,7 @@ int wmain(int argc, wchar_t** argv) {
         okay(guest.GetApplicationDesc(session, &sessionSize, 0), "Guest session metadata is missing");
         require(session->guidInstance == guestEvents.room && session->guidApplication == description.guidApplication && session->dwCurrentPlayers == 2 && std::wstring(session->pwszSessionName) == L"Headless validation", "Guest session identity is wrong");
         require(session->dwApplicationReservedDataSize == applicationData.size() && std::memcmp(session->pvApplicationReservedData, applicationData.data(), applicationData.size()) == 0, "Session configuration bytes were lost");
+        std::cerr << "CHECK: joined; testing idle heartbeat\n";
         std::this_thread::sleep_for(std::chrono::seconds(25));
         { std::lock_guard<std::mutex> lock(hostEvents.mutex); require(!hostEvents.ended, "Idle host connection dropped between moves"); }
         { std::lock_guard<std::mutex> lock(guestEvents.mutex); require(!guestEvents.ended, "Idle guest connection dropped between moves"); }
@@ -82,14 +86,18 @@ int wmain(int argc, wchar_t** argv) {
         okay(guest.GetPeerInfo(1, player, &size, 0), "Host metadata missing");
         require((player->dwPlayerFlags & DPNPLAYER_HOST) && !(player->dwPlayerFlags & DPNPLAYER_LOCAL) && std::wstring(player->pwszName) == L"Host", "Host identity is wrong");
         require(FAILED(third.Connect(&description, guestEvents.address, nullptr, nullptr, nullptr, nullptr, 0, nullptr, nullptr, nullptr, 0)), "Third player joined a full room");
+        std::cerr << "CHECK: capacity verified; exchanging payloads\n";
         joey::Bytes payload{2,0,255,128,1,0,42}; DPN_BUFFER_DESC buffer{static_cast<DWORD>(payload.size()), payload.data()};
         okay(host.SendTo(2, &buffer, 1, 0, nullptr, nullptr, DPNSEND_GUARANTEED | DPNSEND_NOLOOPBACK), "Host send failed");
         { std::unique_lock<std::mutex> lock(guestEvents.mutex); require(guestEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return !guestEvents.received.empty();}), "Guest did not receive duel bytes"); require(guestEvents.sender == 1 && guestEvents.received == payload, "Duel bytes changed in relay"); }
         payload = {255,0,12,128,0}; buffer.dwBufferSize = static_cast<DWORD>(payload.size()); buffer.pBufferData = payload.data();
         okay(guest.SendTo(1, &buffer, 1, 0, nullptr, nullptr, DPNSEND_GUARANTEED | DPNSEND_NOLOOPBACK), "Guest send failed");
         { std::unique_lock<std::mutex> lock(hostEvents.mutex); require(hostEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return !hostEvents.received.empty();}), "Host did not receive duel bytes"); require(hostEvents.sender == 2 && hostEvents.received == payload, "Reverse duel bytes changed"); }
+        std::cerr << "CHECK: payloads verified; closing guest\n";
         guest.Close(0);
+        std::cerr << "CHECK: guest closed; awaiting disconnect\n";
         { std::unique_lock<std::mutex> lock(hostEvents.mutex); require(hostEvents.changed.wait_for(lock, std::chrono::seconds(8), [&] {return hostEvents.ended;}), "Disconnect was not propagated"); }
+        std::cerr << "CHECK: closing host\n";
         host.Close(0); third.Close(0);
         std::cout << "PASS: native hosting, public discovery, nonblocking cancellation, idle connections, session metadata, joining, player identities, capacity, bidirectional payloads, and disconnect\n";
         return 0;
