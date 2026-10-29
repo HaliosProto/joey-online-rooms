@@ -35,6 +35,28 @@ try{
  const roomList=await fetch((process.env.TEST_SERVER||'https://joey-online-rooms.joey-online-rooms.workers.dev')+'/v1/rooms?app='+roomPosts.at(-1).app);const roomBytes=Buffer.from(await roomList.arrayBuffer());
  writeFileSync('mobile-test-results/room-list.json',JSON.stringify({status:roomList.status,bytes:roomBytes.length,prefix:roomBytes.subarray(0,8).toString('hex')}));
  if(!roomList.ok||roomBytes.length<4||roomBytes.readUInt32LE(0)<1)throw new Error('The room created by the original game is not publicly listed');
+ if(process.env.MOBILE_PAIR==='true'){
+  // A second independent emulator instance uses the cached immutable game download.
+  // Save/load concurrency is outside this check; neither instance saves a duel.
+  const guest=await context.newPage(),guestLogs=[],guestErrors=[],guestLists=[];
+  guest.on('console',m=>guestLogs.push(m.text()));guest.on('pageerror',e=>guestErrors.push(e.stack));
+  guest.on('response',async response=>{if(response.request().method()==='GET'&&new URL(response.url()).pathname==='/v1/rooms'){const bytes=await response.body();guestLists.push({status:response.status(),count:bytes.length>=4?bytes.readUInt32LE(0):-1});}});
+  try{
+   await guest.goto('http://127.0.0.1:8765/');await guest.locator('#prepare').click();await guest.getByRole('button',{name:'Start game',exact:true}).waitFor({timeout:240000});await guest.setViewportSize({width:844,height:390});await guest.getByRole('button',{name:'Start game',exact:true}).click();
+   const guestUntil=Date.now()+12*60000;while(Date.now()<guestUntil&&!guestLogs.some(l=>l.includes('integrated cloud networking enabled'))){if(guestErrors.length)throw new Error(guestErrors.join('\n'));await new Promise(r=>setTimeout(r,10000));}
+   if(!guestLogs.some(l=>l.includes('integrated cloud networking enabled')))throw new Error('Second original game did not start');await new Promise(r=>setTimeout(r,5000));
+   const guestFrame=guest.frames().find(f=>f.url().includes('boxedwine.html')),guestCanvas=guestFrame.locator('#canvas'),gbox=await guestCanvas.boundingBox();
+   const tap=async(x,y,delay=5000)=>{await guest.touchscreen.tap(gbox.x+gbox.width*x,gbox.y+gbox.height*y);await new Promise(r=>setTimeout(r,delay));};
+   await tap(.5,.25);await tap(.5,.25);let prior,menu=false;const until=Date.now()+60000;
+   while(Date.now()<until){const shot=PNG.sync.read(await guestCanvas.screenshot());if(prior&&menuWood(shot)>.25&&imageChange(prior,shot,[.12,.08,.88,.48])<.01&&imageChange(prior,shot,[.25,.54,.75,.94])<.015){menu=true;break;}prior=shot;await new Promise(r=>setTimeout(r,700));}
+   if(!menu)throw new Error('Second original game menu did not settle');
+   await tap(.5,.57,8000);await tap(.5,.90,4000);await tap(.36,.82,7000);await tap(.18,.57,6000);await tap(.81,.28,4000);await tap(.18,.57,12000);
+   await guest.screenshot({path:'mobile-test-results/guest-room-list.png'});await page.screenshot({path:'mobile-test-results/host-with-guest-browser.png'});
+   if(!guestLists.some(x=>x.status===200&&x.count>=1))throw new Error('Original Guest screen did not discover the other original game room');
+   if(guestErrors.length||guestLogs.some(l=>/Unhandled page fault|Unhandled exception|starting debugger/.test(l)))throw new Error('Original Guest flow crashed: '+guestErrors.join('\n'));
+   writeFileSync('mobile-test-results/guest-result.json',JSON.stringify({lists:guestLists}));
+  }finally{writeFileSync('mobile-test-results/guest-browser.txt',guestLogs.join('\n')+'\n'+guestErrors.join('\n'));await guest.screenshot({path:'mobile-test-results/guest-final.png'}).catch(()=>{});await guest.close();}
+ }
  const events=await frame.evaluate(()=>({events:window.testTouch,controls:typeof window.joeyKey,canvas:document.getElementById('canvas').getBoundingClientRect().toJSON()}));console.log('Touch diagnostics:',JSON.stringify(events));const touchEvents=events.events;if(!touchEvents.some(e=>e.type==='mousedown'&&e.button===0)||!touchEvents.some(e=>e.type==='mouseup'))throw new Error('Touch did not create complete mouse input');
  await page.locator('#right').click();await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.5);await new Promise(r=>setTimeout(r,800));if(await page.locator('#right').getAttribute('aria-pressed')!=='false')throw new Error('One-shot right click did not reset');
  // The game's Wine prefix uses persistent storage rather than memory-only launch.
