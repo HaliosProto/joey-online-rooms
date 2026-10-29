@@ -1,3 +1,4 @@
+import { browserRequest, browserResponse } from './browser.mjs';
 import { DurableObject } from 'cloudflare:workers';
 import { timingSafeEqual } from 'node:crypto';
 import { Reader, Writer, WireError, OP, MAX_PACKET, hex, unhex, displayName, parseCreate, encodeRooms, welcome, joined, parseSend, data } from './protocol.mjs';
@@ -37,7 +38,7 @@ async function limitedBody(request: Request, limit: number): Promise<Uint8Array>
 }
 async function digest(value: Uint8Array): Promise<string> { return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', Uint8Array.from(value).buffer))); }
 
-export default {
+const routes = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     try {
@@ -69,6 +70,14 @@ export default {
       console.error(JSON.stringify({ event: 'request_failed', path: url.pathname }));
       return problem(503, 'Lobby temporarily unavailable');
     }
+  }
+} satisfies ExportedHandler<Env>;
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const prepared = browserRequest(request);
+    if (prepared instanceof Response) return prepared;
+    return browserResponse(await routes.fetch(prepared.request, env), prepared.origin, prepared.protocol);
   }
 } satisfies ExportedHandler<Env>;
 

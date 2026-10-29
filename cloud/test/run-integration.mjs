@@ -22,7 +22,7 @@ try {
     await new Promise(resolve => setTimeout(resolve, 300));
   }
   if (!ready) throw new Error('Test backend did not become ready');
-  const result = await run(process.execPath, ['--test', 'test/protocol.test.mjs', 'test/service.test.mjs'], { env: { ...process.env, TEST_SERVER: endpoint } });
+  const result = await run(process.execPath, ['--test', 'test/protocol.test.mjs', 'test/browser.test.mjs', 'test/service.test.mjs', '../mobile/room-transport.live.test.mjs'], { env: { ...process.env, TEST_SERVER: endpoint } });
   if (result) throw new Error(`Service tests failed with exit ${result}`);
   const nativeIndex = process.argv.indexOf('--native');
   if (nativeIndex >= 0) {

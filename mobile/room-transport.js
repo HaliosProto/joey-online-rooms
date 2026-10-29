@@ -30,6 +30,7 @@ globalThis.createJoeyRoomTransport = function (api, endpoint, platform = globalT
     events(s);
   }
   function response(s, status, body = new Uint8Array()) {
+    if (s.replied) return; s.replied = true;
     enqueue(s, enc.encode(`HTTP/1.1 ${status}\r\nContent-Type: application/octet-stream\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n`));
     enqueue(s, body); s.closed = true; events(s);
   }
@@ -175,7 +176,7 @@ globalThis.createJoeyRoomTransport = function (api, endpoint, platform = globalT
       events(s); return written;
     },
     close(id) { const s = sockets.get(id); if (s) { s.abort?.abort(); try { s.ws?.close(1000); } catch {} sockets.delete(id); } return 0; },
-    shutdown(id, how) { const s = sockets.get(id); if (!s) return -107; if (how < 0 || how > 2) return -22; if (how !== 1) s.inClosed = true; if (how !== 0) s.outClosed = true; if (how === 2) { s.ws?.close(1000); s.closed = true; } events(s); return 0; },
+    shutdown(id, how) { const s = sockets.get(id); if (!s) return -107; if (how < 0 || how > 2) return -22; if (how !== 1) { s.inClosed = true; s.rx = []; s.rxBytes = 0; } if (how !== 0) s.outClosed = true; if (how === 2) { s.ws?.close(1000); s.closed = true; } events(s); return 0; },
     getEvents(id) { return sockets.get(id)?.events ?? 16; },
     getError(id) { return sockets.get(id)?.error ?? 101; },
     readableBytes(id) { return sockets.get(id)?.rxBytes ?? 0; },
