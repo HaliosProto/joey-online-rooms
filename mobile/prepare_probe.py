@@ -40,6 +40,21 @@ with zipfile.ZipFile(root) as z:
     chosen=next((n for n in candidates if '/i386-windows/' in n),candidates[0])
     real_input=z.read(chosen)
     print('Root home entries:',[n for n in z.namelist() if n.startswith('home/')][:15],flush=True)
+startup = r'''@echo off
+cd /d "%~dp0"
+if not exist "C:\JoeyCommon" mkdir "C:\JoeyCommon"
+reg add "HKLM\Software\KONAMI\Yu-Gi-Oh! Power Of Chaos" /v InstallDirJ /t REG_SZ /d "%CD%" /f
+reg add "HKLM\Software\KONAMI\Yu-Gi-Oh! Power Of Chaos" /v CommonDir /t REG_SZ /d "C:\JoeyCommon" /f
+reg add "HKCU\Software\Wine\Direct3D" /v renderer /t REG_SZ /d gdi /f
+reg add "HKCU\Software\Wine\Direct3D" /v DirectDrawRenderer /t REG_SZ /d gdi /f
+reg add "HKCU\Software\Wine\DirectInput" /v MouseWarpOverride /t REG_SZ /d disable /f
+copy /y "%~dp0dinput.dll" "%WINDIR%\system32\dinput.dll"
+copy /y "%~dp0joey-system-dinput.dll" "%WINDIR%\system32\joey-system-dinput.dll"
+copy /y "%~dp0joey-online.ini" "%WINDIR%\system32\joey-online.ini"
+echo JOEY_STARTING_ORIGINAL_GAME
+joey_pc.exe
+echo JOEY_GAME_EXITED_%ERRORLEVEL%
+'''
 with zipfile.ZipFile(game) as incoming,zipfile.ZipFile(a.output/'game.zip','w',compression=zipfile.ZIP_STORED) as outgoing:
     for entry in incoming.infolist():
         if entry.is_dir(): continue
@@ -48,6 +63,7 @@ with zipfile.ZipFile(game) as incoming,zipfile.ZipFile(a.output/'game.zip','w',c
         elif name=='joey-online.ini': data='[Online]\r\nEnabled=1\r\nEndpoint=http://127.0.0.1:80\r\n'.encode('utf-16')
         else: data=incoming.read(entry)
         outgoing.writestr('joey/'+name,data)
+    outgoing.writestr('joey/start-game.bat',startup.replace('\n','\r\n'))
     outgoing.write(a.native/'native-check.exe','joey/native-check.exe')
     outgoing.writestr('joey/joey-system-dinput.dll',real_input)
 with zipfile.ZipFile(a.output/'online.zip','w',compression=zipfile.ZIP_DEFLATED) as outgoing:

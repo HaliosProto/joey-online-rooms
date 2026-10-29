@@ -22,7 +22,7 @@ page.on('console',m=>{lines.push(m.text()); if(lines.length%100===0) console.log
 page.on('pageerror',e=>{errors.push(e.stack||String(e));console.error('Page error:',e.stack||String(e));});
 page.on('crash',()=>errors.push('Browser page crashed'));
 try{
- const params=new URLSearchParams({root:'runtime',app:'game',overlay:'online',p:'joey/joey_pc.exe',w:'c:/files/joey',registry:'gdi,win10,mousewarp-disable','wine-override':'nomono','auto':'false',storage:'memory'});
+ const params=new URLSearchParams({root:'runtime',app:'game',p:'start-game.bat',w:'c:/files/joey','wine-override':'nomono','auto':'false',storage:'memory'});
  await page.goto('http://127.0.0.1:8765/boxedwine.html?'+params,{waitUntil:'domcontentloaded',timeout:60000});
  console.log('Controls:',await page.locator('button,input[type=button]').allTextContents());
  const readyUntil=Date.now()+180000;
@@ -39,6 +39,7 @@ try{
      writeFileSync('mobile-test-results/result.txt','PASS: original game activated multiplayer in the browser emulator. Full duel and physical mobile devices unverified.\n');
      break;
    }
+   if(lines.some(l=>l.includes('JOEY_GAME_EXITED_')||l.includes("Can't recognize '")))throw new Error('Original game exited before multiplayer activated');
    if(errors.length)throw new Error(errors.join('\n'));
  }
  if(!lines.some(l=>l.includes('integrated cloud networking enabled')))throw new Error('Game did not activate multiplayer within probe time limit');
