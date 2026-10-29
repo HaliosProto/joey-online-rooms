@@ -21,7 +21,13 @@ try:
     marker = support / 'Common' / 'mac-save-preservation-check.txt'
     marker.write_text('keep this user save')
     launcher = subprocess.Popen([str(app / 'Contents' / 'MacOS' / 'JoeyLauncher')], env=env)
-    time.sleep(30)
+    deadline = time.monotonic() + 120
+    while time.monotonic() < deadline:
+        current_log = (support / 'launcher.log').read_text(errors='replace')
+        if 'Joey Online: integrated cloud networking enabled' in current_log or launcher.poll() is not None:
+            break
+        time.sleep(1)
+    time.sleep(5)
     if launcher.poll() is not None:
         raise RuntimeError('Mac launcher exited before the game startup check')
     subprocess.run(['/usr/sbin/screencapture', '-x', str(report / 'game-start.png')], check=False, timeout=15)

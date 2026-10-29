@@ -30,6 +30,8 @@ void initialize() {
     const bool wine = GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "wine_get_version") != nullptr;
     const std::wstring input = std::wstring(system) + (wine ? L"\\joey-system-dinput.dll" : L"\\dinput.dll");
     realInput = LoadLibraryExW(input.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (realInput == moduleHandle) { realInput = nullptr; }
+    if (!realInput) { OutputDebugStringA("Joey Online: system input forwarding unavailable\n"); return; }
 
     wchar_t filename[MAX_PATH]{}; GetModuleFileNameW(moduleHandle, filename, MAX_PATH);
     std::wstring directory(filename); directory.resize(directory.find_last_of(L"\\/") + 1);

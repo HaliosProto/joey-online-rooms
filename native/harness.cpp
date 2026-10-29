@@ -38,10 +38,28 @@ static HRESULT WINAPI callback(void* context, DWORD id, void* value) {
 static void require(bool condition, const char* message) { if (!condition) throw std::runtime_error(message); }
 static void okay(HRESULT result, const char* message) { require(SUCCEEDED(result), message); }
 int wmain(int argc, wchar_t** argv) {
-    if (argc != 2) { std::cerr << "Usage: native-check.exe https://cloud-endpoint\n"; return 2; }
+    const bool checkInput = argc == 3 && std::wstring(argv[2]) == L"--check-input";
+    if (argc != 2 && !checkInput) { std::cerr << "Usage: native-check.exe https://cloud-endpoint\n"; return 2; }
     Observation hostEvents, guestEvents, thirdEvents;
     joey::Peer host(argv[1]), guest(argv[1]), third(argv[1]);
     try {
+        if (checkInput) {
+            wchar_t system[MAX_PATH]{};
+            require(GetSystemDirectoryW(system, MAX_PATH) != 0, "Input system directory missing");
+            const auto path = std::wstring(system) + L"\\dinput.dll";
+            const auto inputModule = LoadLibraryExW(path.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+            require(inputModule != nullptr, "Mac input proxy could not load");
+            using CreateInput = HRESULT (WINAPI*)(HINSTANCE, DWORD, void**, IUnknown*);
+            const auto create = reinterpret_cast<CreateInput>(GetProcAddress(inputModule, "DirectInputCreateA"));
+            require(create != nullptr, "Mac input creation entry is missing");
+            void* input = nullptr;
+            const HRESULT result = create(GetModuleHandleW(nullptr), 0x0700, &input, nullptr);
+            if (input) static_cast<IUnknown*>(input)->Release();
+            FreeLibrary(inputModule);
+            okay(result, "Wine input forwarding failed");
+            require(input != nullptr, "Wine input forwarding returned no device interface");
+            std::cerr << "CHECK: Wine input forwarding passed\n";
+        }
         okay(host.Initialize(&hostEvents, callback, 0), "Host initialization failed");
         okay(guest.Initialize(&guestEvents, callback, 0), "Guest initialization failed");
         okay(third.Initialize(&thirdEvents, callback, 0), "Third initialization failed");

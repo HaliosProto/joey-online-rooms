@@ -52,7 +52,7 @@ if [[ ! -f "$game/.complete" ]]; then
   rm -rf -- "$stage"
   trap - EXIT
 fi
-status 'Preparing Windows compatibility (first launch may take a minute)...'
+status 'Preparing Windows compatibility (first launch may take a few minutes)...'
 if [[ ! -f "$support/.prefix-initialized" ]]; then
   # Prefix setup does not need a visible window. Avoid Wine's rundll32/Cocoa
   # activation loop during first-run setup, then restart with normal Mac input.
@@ -86,7 +86,7 @@ if [[ "${1:-}" == '--prepare-only' ]]; then
   status 'Game environment ready.'
 elif [[ "${1:-}" == '--transport-check' ]]; then
   status 'Checking public online rooms...'
-  "$wine" "${2:?Transport check executable required}" 'https://joey-online-rooms.joey-online-rooms.workers.dev'
+  "$wine" "${2:?Transport check executable required}" 'https://joey-online-rooms.joey-online-rooms.workers.dev' --check-input
 else
   status 'Starting game...'
   "$wine" explorer /desktop=JoeyOnline,1024x768 joey_pc.exe &

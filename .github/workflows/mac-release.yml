@@ -80,4 +80,4 @@ jobs:
         run: |
           cd package
           sha256sum -c Joey-Online-Mac.sha256
-          gh release create mac-preview-1 Joey-Online-Mac.zip Joey-Online-Mac.sha256 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease --title 'Mac game + online multiplayer preview' --notes-file ../macos/release-notes.md
+          gh release create "mac-preview-$GITHUB_RUN_NUMBER" Joey-Online-Mac.zip Joey-Online-Mac.sha256 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease --title 'Mac game + online multiplayer preview' --notes-file ../macos/release-notes.md
