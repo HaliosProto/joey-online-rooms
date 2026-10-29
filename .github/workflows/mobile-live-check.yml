@@ -1,0 +1,26 @@
+name: Verify published mobile room connection
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  published:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install cloud browser tooling
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Exercise real Windows peers inside the published browser game runtime
+        env:
+          MOBILE_SITE_URL: https://haliosproto.github.io/joey-online-rooms/
+          MOBILE_CHECK: network
+        run: node mobile/probe_browser.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: published-mobile-network-results
+          path: mobile-test-results/
+          retention-days: 7

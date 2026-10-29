@@ -24,13 +24,19 @@ page.on('pageerror',e=>{errors.push(e.stack||String(e));console.error('Page erro
 page.on('crash',()=>errors.push('Browser page crashed'));
 try{
  const check=process.env.MOBILE_CHECK==='network';
- const params=new URLSearchParams({root:'runtime',app:'game',p:check?'check-network.bat':'start-game.bat',w:'c:/files/joey','wine-override':'nomono','auto':'false',storage:'memory'});
- await page.goto('http://127.0.0.1:8765/boxedwine.html?'+params,{waitUntil:'domcontentloaded',timeout:60000});
+ const params=new URLSearchParams({root:'runtime',app:'game',p:check?'check-network.bat':'start-game.bat',w:'c:/files/joey','wine-override':'nomono','auto':process.env.MOBILE_SITE_URL?'true':'false',storage:'memory'});
+ if(process.env.MOBILE_SITE_URL){
+  await page.goto(process.env.MOBILE_SITE_URL,{waitUntil:'domcontentloaded'});
+  await page.evaluate(async()=>{await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise(r=>navigator.serviceWorker.addEventListener('controllerchange',r,{once:true}));});
+ }
+ await page.goto(new URL('boxedwine.html',process.env.MOBILE_SITE_URL||'http://127.0.0.1:8765/').href+'?'+params,{waitUntil:'domcontentloaded',timeout:60000});
  if(process.env.TEST_SERVER)await page.evaluate(url=>{Module['joeyCloudOrigin']=url;},process.env.TEST_SERVER);
  console.log('Controls:',await page.locator('button,input[type=button]').allTextContents());
+ if(!process.env.MOBILE_SITE_URL){
  const readyUntil=Date.now()+180000;
  while(!(await page.locator('#startbtn').isVisible())&&Date.now()<readyUntil){if(errors.length)throw new Error(errors.join('\n'));await new Promise(r=>setTimeout(r,1000));}
  await page.locator('#startbtn').click();
+ }
  const until=Date.now()+12*60*1000;
  while(Date.now()<until){
    await new Promise(r=>setTimeout(r,10000));
