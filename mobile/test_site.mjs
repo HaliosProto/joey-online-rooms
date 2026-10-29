@@ -54,7 +54,13 @@ try{
    await guest.screenshot({path:'mobile-test-results/guest-room-list.png'});await page.screenshot({path:'mobile-test-results/host-with-guest-browser.png'});
    if(!guestLists.some(x=>x.status===200&&x.count>=1))throw new Error('Original Guest screen did not discover the other original game room');
    if(guestErrors.length||guestLogs.some(l=>/Unhandled page fault|Unhandled exception|starting debugger/.test(l)))throw new Error('Original Guest flow crashed: '+guestErrors.join('\n'));
-   writeFileSync('mobile-test-results/guest-result.json',JSON.stringify({lists:guestLists}));
+   await tap(.67,.18,3000);await tap(.18,.57,15000);
+   await guest.screenshot({path:'mobile-test-results/guest-connected.png'});await page.screenshot({path:'mobile-test-results/host-connected.png'});
+   const joinedResponse=await fetch(process.env.TEST_SERVER+'/v1/rooms?app='+roomPosts.at(-1).app),joinedBytes=Buffer.from(await joinedResponse.arrayBuffer());
+   const players=joinedBytes.length>=48&&joinedBytes.readUInt32LE(0)===1?joinedBytes.readUInt32LE(44):0;
+   writeFileSync('mobile-test-results/guest-result.json',JSON.stringify({lists:guestLists,players}));
+   if(players!==2)throw new Error('The two original games did not remain connected to the same room');
+   if(guestLogs.some(l=>/Unhandled page fault|Unhandled exception|starting debugger/.test(l)))throw new Error('Guest crashed after selecting a room');
   }finally{writeFileSync('mobile-test-results/guest-browser.txt',guestLogs.join('\n')+'\n'+guestErrors.join('\n'));await guest.screenshot({path:'mobile-test-results/guest-final.png'}).catch(()=>{});await guest.close();}
  }
  const events=await frame.evaluate(()=>({events:window.testTouch,controls:typeof window.joeyKey,canvas:document.getElementById('canvas').getBoundingClientRect().toJSON()}));console.log('Touch diagnostics:',JSON.stringify(events));const touchEvents=events.events;if(!touchEvents.some(e=>e.type==='mousedown'&&e.button===0)||!touchEvents.some(e=>e.type==='mouseup'))throw new Error('Touch did not create complete mouse input');
