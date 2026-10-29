@@ -50,6 +50,7 @@ int wmain(int argc, wchar_t** argv) {
         info.pwszName = const_cast<wchar_t*>(L"Friend"); okay(guest.SetPeerInfo(&info, nullptr, nullptr, DPNSETPEERINFO_SYNC), "Guest name failed");
         DPN_APPLICATION_DESC description{}; description.dwSize = sizeof(description); description.dwMaxPlayers = 2;
         CoCreateGuid(&description.guidApplication); description.pwszSessionName = const_cast<wchar_t*>(L"Headless validation");
+        joey::Bytes applicationData{0,255,128,42}; description.pvApplicationReservedData = applicationData.data(); description.dwApplicationReservedDataSize = static_cast<DWORD>(applicationData.size());
         okay(host.Host(&description, nullptr, 0, nullptr, nullptr, nullptr, 0), "Cloud hosting failed");
         guestEvents.blockDiscovery = true;
         DPNHANDLE discovery = 0;
@@ -67,6 +68,12 @@ int wmain(int argc, wchar_t** argv) {
             require(hostEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return hostEvents.players == 2;}), "Host did not see guest");
         }
         require(guestEvents.players == 2, "Guest did not see both players");
+        DWORD sessionSize = 0;
+        require(guest.GetApplicationDesc(nullptr, &sessionSize, 0) == DPNERR_BUFFERTOOSMALL, "Session size negotiation failed");
+        joey::Bytes sessionBytes(sessionSize); auto* session = reinterpret_cast<DPN_APPLICATION_DESC*>(sessionBytes.data());
+        okay(guest.GetApplicationDesc(session, &sessionSize, 0), "Guest session metadata is missing");
+        require(session->guidInstance == guestEvents.room && session->guidApplication == description.guidApplication && session->dwCurrentPlayers == 2 && std::wstring(session->pwszSessionName) == L"Headless validation", "Guest session identity is wrong");
+        require(session->dwApplicationReservedDataSize == applicationData.size() && std::memcmp(session->pvApplicationReservedData, applicationData.data(), applicationData.size()) == 0, "Session configuration bytes were lost");
         std::this_thread::sleep_for(std::chrono::seconds(25));
         { std::lock_guard<std::mutex> lock(hostEvents.mutex); require(!hostEvents.ended, "Idle host connection dropped between moves"); }
         { std::lock_guard<std::mutex> lock(guestEvents.mutex); require(!guestEvents.ended, "Idle guest connection dropped between moves"); }
@@ -84,7 +91,7 @@ int wmain(int argc, wchar_t** argv) {
         guest.Close(0);
         { std::unique_lock<std::mutex> lock(hostEvents.mutex); require(hostEvents.changed.wait_for(lock, std::chrono::seconds(8), [&] {return hostEvents.ended;}), "Disconnect was not propagated"); }
         host.Close(0); third.Close(0);
-        std::cout << "PASS: native hosting, public discovery, nonblocking cancellation, idle connections, joining, player identities, capacity, bidirectional payloads, and disconnect\n";
+        std::cout << "PASS: native hosting, public discovery, nonblocking cancellation, idle connections, session metadata, joining, player identities, capacity, bidirectional payloads, and disconnect\n";
         return 0;
     } catch (const std::exception& error) { std::cerr << "FAIL: " << error.what() << "\n"; return 1; }
 }

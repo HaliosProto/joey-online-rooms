@@ -3,6 +3,7 @@ JOEY ONLINE ROOMS - MULTIPLAYER PREVIEW
 This companion connects the existing two-player screens in Joey the Passion to
 a public cloud room list. Each player needs their own compatible game copy.
 No GameRanger, VPN, router forwarding, or lobby account is needed.
+The companion requires Windows 8 or newer; cloud checks use current Windows.
 
 SETUP
 1. Close the game.

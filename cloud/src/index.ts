@@ -41,6 +41,10 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     try {
+      if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname) && url.pathname !== '/health') {
+        url.protocol = 'https:';
+        return Response.redirect(url.href, 308);
+      }
       if (url.pathname === '/health' && request.method === 'GET') return Response.json({ service: 'joey-online-rooms', protocol: 1 });
       if (url.pathname === '/v1/rooms' && request.method === 'GET') {
         const app = url.searchParams.get('app') ?? '';

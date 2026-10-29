@@ -190,10 +190,17 @@ HRESULT Peer::Host(const DPN_APPLICATION_DESC* description, IDirectPlay8Address*
     } catch (const std::exception& error) { failure(error); return DPNERR_NOCONNECTION; }
 }
 HRESULT Peer::Connect(const DPN_APPLICATION_DESC* description, IDirectPlay8Address* address, IDirectPlay8Address*, const DPN_SECURITY_DESC*, const DPN_SECURITY_CREDENTIALS*, const void*, DWORD, void* playerContext, void* asyncContext, DPNHANDLE* handle, DWORD flags) {
-    if (!description || !address) return E_INVALIDARG;
+    if (!description || description->dwSize != sizeof(DPN_APPLICATION_DESC) || !address) return E_INVALIDARG;
     auto* online = dynamic_cast<Address*>(address); if (!online) return E_INVALIDARG;
     const DPNHANDLE operation = nextHandle++; if (handle) *handle = operation;
-    { std::lock_guard<std::mutex> lock(state->mutex); state->localContext = playerContext; state->connectContext = asyncContext; state->connectHandle = operation; state->room.app = description->guidApplication; }
+    try {
+        const auto available = rooms(state->endpoint, description->guidApplication);
+        const auto selected = std::find_if(available.begin(), available.end(), [&](const Room& room) { return room.id == online->room; });
+        if (selected == available.end()) return DPNERR_NOCONNECTION;
+        std::lock_guard<std::mutex> lock(state->mutex);
+        state->localContext = playerContext; state->connectContext = asyncContext; state->connectHandle = operation;
+        state->room = *selected;
+    } catch (const std::exception& error) { failure(error); return DPNERR_NOCONNECTION; }
     const HRESULT result = startRoom(online->room, L"", false);
     return FAILED(result) ? result : (flags & DPNCONNECT_SYNC ? S_OK : DPNSUCCESS_PENDING);
 }
