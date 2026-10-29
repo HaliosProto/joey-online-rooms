@@ -1,7 +1,17 @@
 // Input stays inside the game frame. Android save export opens the system file picker.
 (()=>{
  const canvas=document.getElementById('canvas');let active=null,button=0,pressedAt=0;
- const send=(type,x,y)=>canvas.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,button,buttons:type==='mouseup'?0:button===2?2:1,view:window}));
+ // Call the emulator's input entry points directly so browser focus changes cannot
+ // release a synthetic mouse press before the guest game polls it.
+ const send=(type,x,y)=>{
+  const present=document.getElementById('boxedwine-webgl-canvas-0');const style=present&&getComputedStyle(present);
+  const target=present&&present.width&&style.display!=='none'&&style.visibility!=='hidden'?present:canvas;const rect=target.getBoundingClientRect();
+  if(!rect.width||typeof window._boxedwineEmscriptenMouseButton!=='function')return;
+  const gx=Math.max(0,Math.min(target.width-1,Math.round((x-rect.left)*target.width/rect.width))),gy=Math.max(0,Math.min(target.height-1,Math.round((y-rect.top)*target.height/rect.height)));
+  window._boxedwineEmscriptenPointerLock(0);
+  if(type==='mousemove')window._boxedwineEmscriptenMouseMove(gx,gy);
+  else{canvas.focus();window._boxedwineEmscriptenMouseButton(type==='mousedown'?1:0,button===2?1:0,gx,gy);}
+ };
  const touch=(type,handler)=>document.addEventListener(type,event=>{if(event.target!==canvas)return;event.preventDefault();event.stopImmediatePropagation();handler(event);},{capture:true,passive:false});
  touch('touchstart',event=>{if(active!==null)return;const point=event.changedTouches[0];active=point.identifier;pressedAt=performance.now();button=window.joeyRightClick?2:0;send('mousemove',point.clientX,point.clientY);send('mousedown',point.clientX,point.clientY);});
  touch('touchmove',event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(point)send('mousemove',point.clientX,point.clientY);});
