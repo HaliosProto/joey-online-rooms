@@ -40,7 +40,7 @@ try{
      await new Promise(r=>setTimeout(r,check?1000:30000));
      await page.screenshot({path:'mobile-test-results/game.png'});
      writeFileSync('mobile-test-results/result.txt',check?'PASS: native WinHTTP room operations through browser sockets.\n':'PASS: original game activated multiplayer in the browser emulator. Full duel and physical mobile devices unverified.\n');
-     if(!check){const canvas=page.locator('#canvas');const box=await canvas.boundingBox();await page.mouse.click(box.x+box.width*.5,box.y+box.height*.57);await new Promise(r=>setTimeout(r,8000));await page.screenshot({path:'mobile-test-results/duel-mode.png'});}
+     if(!check){const canvas=page.locator('#canvas');const box=await canvas.boundingBox();await page.mouse.click(box.x+box.width*.5,box.y+box.height*.57,{delay:150});await new Promise(r=>setTimeout(r,8000));await page.screenshot({path:'mobile-test-results/duel-mode.png'});}
      break;
    }
    if(lines.some(l=>l.includes('FAIL: ')||l.includes('JOEY_GAME_EXITED_')||l.includes("Can't recognize '")))throw new Error('Original game exited before multiplayer activated');

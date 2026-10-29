@@ -16,7 +16,7 @@ try{
  await frame.evaluate(()=>{window.testTouch=[];const c=document.getElementById('canvas');for(const type of ['mousedown','mouseup'])c.addEventListener(type,e=>window.testTouch.push({type,button:e.button}));});
  const canvas=frame.locator('#canvas'),box=await canvas.boundingBox();await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.57);await new Promise(r=>setTimeout(r,8000));await page.screenshot({path:'mobile-test-results/mobile-duel-mode.png'});
  const events=await frame.evaluate(()=>window.testTouch);if(!events.some(e=>e.type==='mousedown'&&e.button===0)||!events.some(e=>e.type==='mouseup'))throw new Error('Touch did not create complete mouse input');
- await page.locator('#right').click();await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.5);if(await page.locator('#right').getAttribute('aria-pressed')!=='false')throw new Error('One-shot right click did not reset');
+ await page.locator('#right').click();await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.5);await new Promise(r=>setTimeout(r,200));if(await page.locator('#right').getAttribute('aria-pressed')!=='false')throw new Error('One-shot right click did not reset');
  // The game's Wine prefix uses persistent storage rather than memory-only launch.
  if(!logs.some(l=>l.includes('Use Root FS storage mode: INDEXED_DB')))throw new Error('Game saves are not configured for persistent storage');
  await page.locator('#name').click();await page.locator('#typed').fill('Friend');await page.locator('#send-text').click();await page.locator('#back').click();
