@@ -1,6 +1,6 @@
 Separate Mac download; the existing Windows release stays available.
 
-Extract **Joey-Online-Mac.zip**, move **Joey Online.app** to Applications and open it. Game files and multiplayer configuration are included. On first launch, the app downloads and verifies the free Wine Stable runtime (185 MB). Apple Silicon Macs also require Apple's free Rosetta. No paid compatibility software or Windows license is required.
+Extract **Joey-Online-Mac.zip**, move **Joey Online.app** to Applications and open it. Game files and multiplayer configuration are included. On first launch, the app downloads and verifies the free Wine 11.20 runtime (226 MB). Apple Silicon Macs also require Apple's free Rosetta. No paid compatibility software or Windows license is required.
 
 If macOS blocks this app, use its per-app **Privacy & Security > Open Anyway** option only if you trust the download. This free build is ad-hoc signed and is not Apple-notarized. [Apple's opening instructions](https://support.apple.com/en-us/102445).
 

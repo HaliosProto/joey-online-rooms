@@ -14,7 +14,7 @@ env = dict(os.environ, JOEY_HOME=str(support), JOEY_WINE_DEBUG='+debugstr,+loadd
 resources = app / 'Contents' / 'Resources'
 try:
     subprocess.run(['/bin/bash', str(resources / 'bootstrap.sh'), '--transport-check', str(harness)], env=env, check=True, timeout=240)
-    engine = support / 'runtime-11.0_1' / 'Wine Stable.app' / 'Contents' / 'Resources' / 'wine' / 'bin'
+    engine = support / 'runtime-11.20' / 'Wine Devel.app' / 'Contents' / 'Resources' / 'wine' / 'bin'
     wine_env = dict(env, WINEPREFIX=str(support / 'prefix'))
     # Launch the same signed executable Finder launches, with no terminal needed.
     launcher = subprocess.Popen([str(app / 'Contents' / 'MacOS' / 'JoeyLauncher')], env=env)
@@ -41,7 +41,7 @@ try:
         raise RuntimeError('User data changed during game shutdown')
 finally:
     subprocess.run(['/usr/sbin/screencapture', '-x', str(report / 'final-screen.png')], check=False, timeout=15)
-    server = support / 'runtime-11.0_1' / 'Wine Stable.app' / 'Contents' / 'Resources' / 'wine' / 'bin' / 'wineserver'
+    server = support / 'runtime-11.20' / 'Wine Devel.app' / 'Contents' / 'Resources' / 'wine' / 'bin' / 'wineserver'
     if server.exists():
         subprocess.run([str(server), '-k'], env=dict(env, WINEPREFIX=str(support / 'prefix')), check=False, timeout=20)
     log = support / 'launcher.log'

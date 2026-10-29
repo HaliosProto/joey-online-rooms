@@ -15,19 +15,19 @@ export WINE_D3D_CONFIG='renderer=gdi'
 export MVK_CONFIG_LOG_LEVEL=0
 export WINEDEBUG="${JOEY_WINE_DEBUG:--all}"
 # Inhibits Wine's optional HTML/.NET installers; the game needs neither.
-engine="$support/runtime-11.0_1"
+engine="$support/runtime-11.20"
 if [[ ! -f "$engine/.complete" ]]; then
-  status 'Downloading the free compatibility runtime (185 MB, first launch only)...'
+  status 'Downloading the free compatibility runtime (226 MB, first launch only)...'
   stage="$(mktemp -d "$support/runtime-download.XXXXXX")"
   trap 'rm -rf -- "$stage"' EXIT
   /usr/bin/curl --fail --location --retry 3 --connect-timeout 30 --proto '=https' --proto-redir '=https' \
-    'https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.0_1/wine-stable-11.0_1-osx64.tar.xz' -o "$stage/wine.tar.xz"
+    'https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.20/wine-devel-11.20-osx64.tar.xz' -o "$stage/wine.tar.xz"
   actual="$(/usr/bin/shasum -a 256 "$stage/wine.tar.xz" | /usr/bin/awk '{print $1}')"
-  [[ "$actual" == 'b50dc50ec7f41d58b115a6b685d4d1315ba3c797bd3aa0f49213f2703cb82388' ]] || { status 'Runtime verification failed. Please try again.'; exit 1; }
+  [[ "$actual" == '33bbe09ac5d867d75d6d3aef23b66d25ff81cb62c33bc3f405c138bbf7195ad7' ]] || { status 'Runtime verification failed. Please try again.'; exit 1; }
   status 'Unpacking the compatibility runtime...'
   mkdir "$stage/unpacked"
   /usr/bin/tar -xJf "$stage/wine.tar.xz" -C "$stage/unpacked"
-  [[ -x "$stage/unpacked/Wine Stable.app/Contents/Resources/wine/bin/wine" ]]
+  [[ -x "$stage/unpacked/Wine Devel.app/Contents/Resources/wine/bin/wine" ]]
   # A completed engine is never overwritten, and an incomplete one is not used.
   [[ ! -e "$engine" ]] || { status 'An incomplete runtime folder needs attention. See launcher.log.'; exit 1; }
   touch "$stage/unpacked/.complete"
@@ -35,8 +35,8 @@ if [[ ! -f "$engine/.complete" ]]; then
   rm -rf -- "$stage"
   trap - EXIT
 fi
-wine="$engine/Wine Stable.app/Contents/Resources/wine/bin/wine"
-wineserver="$engine/Wine Stable.app/Contents/Resources/wine/bin/wineserver"
+wine="$engine/Wine Devel.app/Contents/Resources/wine/bin/wine"
+wineserver="$engine/Wine Devel.app/Contents/Resources/wine/bin/wineserver"
 "$wine" --version
 # Keep saves and Wine registry outside the .app so Finder moves/updates are safe.
 game="$support/game-preview-2"
@@ -54,7 +54,10 @@ if [[ ! -f "$game/.complete" ]]; then
 fi
 status 'Preparing Windows compatibility (first launch may take a minute)...'
 if [[ ! -f "$support/.prefix-initialized" ]]; then
-  "$wine" wineboot -u
+  # Prefix setup does not need a visible window. Avoid Wine's rundll32/Cocoa
+  # activation loop during first-run setup, then restart with normal Mac input.
+  WINEDLLOVERRIDES="$WINEDLLOVERRIDES;winemac.drv=" "$wine" wineboot -u
+  "$wineserver" -k
   "$wineserver" -w
   mkdir -p "$support/Common"
   gamewin="$("$wine" winepath -w "$game" | tr -d '\r')"
