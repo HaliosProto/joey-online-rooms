@@ -1,0 +1,76 @@
+name: Build verified cloud preview
+on:
+  workflow_dispatch:
+    inputs:
+      endpoint:
+        description: Verified HTTPS lobby origin
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      CLOUD_ENDPOINT: ${{ inputs.endpoint }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Validate deployment URL
+        shell: pwsh
+        run: |
+          $url = [Uri]$env:CLOUD_ENDPOINT
+          if ($url.Scheme -ne 'https' -or $url.UserInfo -or $url.Query -or $url.Fragment) { throw 'A plain HTTPS lobby URL is required.' }
+          $health = Invoke-RestMethod ($url.AbsoluteUri.TrimEnd('/') + '/health')
+          if ($health.service -ne 'joey-online-rooms' -or $health.protocol -ne 1) { throw 'Lobby health check failed.' }
+      - name: Install backend tooling
+        working-directory: cloud
+        run: npm ci
+      - name: Check backend types
+        working-directory: cloud
+        shell: pwsh
+        run: |
+          npx wrangler types
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run check
+          exit $LASTEXITCODE
+      - name: Compile native module and transport check
+        shell: pwsh
+        run: ./native/Build.ps1
+      - name: Test live production service
+        working-directory: cloud
+        shell: pwsh
+        run: |
+          $env:TEST_SERVER = $env:CLOUD_ENDPOINT
+          npm test
+          exit $LASTEXITCODE
+      - name: Test native transport against production
+        shell: pwsh
+        run: |
+          & ./native/build/native-check.exe $env:CLOUD_ENDPOINT
+          exit $LASTEXITCODE
+      - name: Package companion
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP 'joey-online-package'
+          New-Item -ItemType Directory -Path $package -Force | Out-Null
+          Copy-Item -LiteralPath './native/build/dinput.dll' -Destination (Join-Path $package 'dinput.dll')
+          Copy-Item -LiteralPath './native/PLAYER-README.txt' -Destination (Join-Path $package 'README.txt')
+          Copy-Item -LiteralPath './native/COPYING.LIB' -Destination (Join-Path $package 'COPYING.LIB')
+          Copy-Item -LiteralPath './native/NOTICE.md' -Destination (Join-Path $package 'NOTICE.md')
+          $configuration = "[Online]`r`nEnabled=1`r`nEndpoint=$($env:CLOUD_ENDPOINT.TrimEnd('/'))`r`n"
+          [IO.File]::WriteAllText((Join-Path $package 'joey-online.ini'), $configuration, [Text.Encoding]::Unicode)
+          Compress-Archive -Path (Join-Path $package '*') -DestinationPath './joey-online-preview.zip'
+          (Get-FileHash -LiteralPath './joey-online-preview.zip' -Algorithm SHA256).Hash | Set-Content './joey-online-preview.sha256'
+      - name: Publish tested preview download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create "preview-$env:GITHUB_RUN_NUMBER" './joey-online-preview.zip' './joey-online-preview.sha256' --target $env:GITHUB_SHA --prerelease --title 'Joey Online multiplayer preview' --notes-file './native/release-notes.md'
+          exit $LASTEXITCODE

@@ -4,7 +4,7 @@ An in-game multiplayer companion for Yu-Gi-Oh! Power of Chaos: Joey the Passion,
 
 ## Status
 
-This is a pre-release implementation. The backend passes local packet and live-service tests. The native x86 module compiles with warnings treated as errors. Cloud-based native integration tests are being established. A production cloud deployment and a complete duel in the original game have not yet been verified. Do not treat this as a finished, playable release.
+This is a pre-release implementation. The backend and native x86 module pass cloud-based checks, including public discovery, hosting/joining, player IDs, capacity, bidirectional relay payloads, nonblocking cancellation, idle connections and disconnects. Native builds treat compiler warnings as errors. A production cloud deployment and a complete duel in the original game have not yet been verified. Do not treat this as a finished, playable release.
 
 ## Intended player experience
 
