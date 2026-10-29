@@ -38,7 +38,7 @@ https://joey-online-rooms.joey-online-rooms.workers.dev
 
 Cloud-based tests passed against the live HTTPS service, including native Windows clients and Wine clients on Intel and Apple Silicon Macs. They cover room discovery/creation, two-player joins, capacity, sender identities, session configuration, isolated bidirectional binary relay, nonblocking search cancellation, idle connections and disconnect cleanup. Native builds treat compiler warnings as errors.
 
-This remains a preview: Chromium and WebKit checks navigate the original game by touch through Duel Mode, the data/name screens and Host selection, then require successful room creation and public discovery. A complete duel, the original Guest selection flow and physical phones remain unverified. Some screens retain their original LAN wording. Background transport checks do not establish that a full duel finishes correctly. See TESTING.md for exact evidence.
+This remains a preview: Chromium and WebKit checks navigate the original game by touch through Duel Mode, the data/name screens and Host selection, then require successful room creation and public discovery. Two original game instances also pass room discovery and joining, reaching the rock-paper-scissors screen together. A complete duel and physical phones remain unverified. Some screens retain their original LAN wording. Background transport checks do not establish that a full duel finishes correctly. See TESTING.md for exact evidence.
 
 ## Implementation
 

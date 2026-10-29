@@ -9,6 +9,6 @@ Mobile compatibility preview for the original Yu-Gi-Oh! Power of Chaos: Joey the
 
 The signed APK is a small launcher for the locally executed browser game; it downloads the game on first use. Existing Windows and Mac downloads remain available.
 
-This is a preview. Touch navigation through the original Host screen, room creation and public listing passed in Chromium and WebKit. Native room joining and binary relay inside the browser emulator also passed cloud tests. The original Guest screen flow remains unverified. Physical phones, complete duels, audio quality and real-game save/load still need qualification. See TESTING.md for exact checks. Free service limits can interrupt availability; no paid billing is enabled.
+This is a preview. Touch navigation through the original Host screen, room creation and public listing passed in Chromium and WebKit. Native room joining and binary relay inside the browser emulator also passed cloud tests. Two original game instances also pass Guest discovery and joining, reaching the rock-paper-scissors screen together. Physical phones, complete duels, audio quality and real-game save/load still need qualification. See TESTING.md for exact checks. Free service limits can interrupt availability; no paid billing is enabled.
 
 Runtime: BoxedWine (GPL 2 or later) and Wine (LGPL 2.1 or later). The site credits link to the exact source revisions, build patches and license notices. Original game and artwork notices are retained.
