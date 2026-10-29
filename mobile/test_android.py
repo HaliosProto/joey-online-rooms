@@ -9,7 +9,10 @@ def tree():
 def find(label,timeout=240):
     until=time.monotonic()+timeout
     while time.monotonic()<until:
-        for node in tree().iter('node'):
+        try: screen=tree()
+        except (subprocess.SubprocessError,ET.ParseError):
+            time.sleep(3);continue
+        for node in screen.iter('node'):
             if label in node.get('text','') or label in node.get('content-desc',''):return node
         print('Waiting for Android screen:',label,flush=True);time.sleep(8)
     raise RuntimeError('Android screen missing: '+label)
