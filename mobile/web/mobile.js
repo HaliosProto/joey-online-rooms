@@ -33,7 +33,7 @@ function key(name,code,keyCode){const win=frame.contentWindow;win?.joeyKey?.(nam
 $('back').onclick=()=>key('Escape','Escape',27);$('enter').onclick=()=>key('Enter','Enter',13);
 $('right').onclick=()=>{right=!right;$('right').setAttribute('aria-pressed',String(right));frame.contentWindow.joeyRightClick=right;};
 $('name').onclick=()=>{$('text-entry').showModal();$('typed').focus();};
-$('send-text').onclick=()=>{for(const character of $('typed').value)frame.contentWindow.joeyType?.(character);$('typed').value='';};
+$('send-text').onclick=()=>{frame.contentWindow.joeyTypeText?.($('typed').value);$('typed').value='';};
 $('full').onclick=()=>document.fullscreenElement?document.exitFullscreen?.():$('play').requestFullscreen?.();
 $('backup').onclick=()=>{try{frame.contentWindow.saveOverlay();}catch{alert('Start the game before exporting a save backup.');}};
 window.joeyBack=()=>{if(!started)return false;key('Escape','Escape',27);return true;};

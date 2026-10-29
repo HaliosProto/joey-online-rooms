@@ -8,7 +8,13 @@
  const release=event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(!point)return;const x=point.clientX,y=point.clientY;setTimeout(()=>{send('mouseup',x,y);active=null;if(window.joeyRightClick){window.joeyRightClick=false;parent.postMessage({type:'joey-right-used'},location.origin);}},Math.max(0,100-(performance.now()-pressedAt)));};
  touch('touchend',release);touch('touchcancel',release);
  window.joeyKey=(key,code,keyCode)=>{canvas.focus();const opts={bubbles:true,cancelable:true,key,code,keyCode,which:keyCode};document.dispatchEvent(new KeyboardEvent('keydown',opts));setTimeout(()=>document.dispatchEvent(new KeyboardEvent('keyup',opts)),80);};
- window.joeyType=character=>{canvas.focus();document.dispatchEvent(new KeyboardEvent('keypress',{bubbles:true,cancelable:true,key:character,charCode:character.codePointAt(0),keyCode:character.codePointAt(0),which:character.codePointAt(0)}));};
+ let typing=Promise.resolve();
+ window.joeyTypeText=text=>{typing=typing.then(async()=>{for(const key of text){
+  const code=/[a-z]/i.test(key)?'Key'+key.toUpperCase():/[0-9]/.test(key)?'Digit'+key:({' ':'Space','-':'Minus','_':'Minus','.':'Period'})[key];if(!code)continue;
+  const upper=/[A-Z_]/.test(key);if(upper)document.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,key:'Shift',code:'ShiftLeft',keyCode:16}));
+  window.joeyKey(key,code,key.toUpperCase().charCodeAt(0));await new Promise(r=>setTimeout(r,120));
+  if(upper)document.dispatchEvent(new KeyboardEvent('keyup',{bubbles:true,key:'Shift',code:'ShiftLeft',keyCode:16}));
+ }});};
  const originalDownload=window.downloadBlob;
  window.downloadBlob=async function(blob,filename){
   if(typeof parent.JoeySaveExport?.save==='function'){
