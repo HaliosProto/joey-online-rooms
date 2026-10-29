@@ -29,6 +29,18 @@ Verified behaviors:
 
 Remaining qualification:
 
-- Verify the companion loads in the supported original executable, the in-game provider/room screens behave correctly, and a complete duel finishes between two original game instances on separate internet connections. No original game files are supplied to the public build workflow.
+- Verify the companion loads in the supported original executable, the in-game provider/room screens behave correctly, and a complete duel finishes between two original game instances on separate internet connections. The original Windows build checks do not launch the game. The Mac build downloads the authorized full-game release to verify startup on cloud Macs.
 
 The original executable and data archives are unchanged. The companion is installed with the verified live endpoint. Background/native tests do not constitute a completed in-game duel.
+
+## Mac qualification
+
+Mac source commit `683d5b4766ca6b9f5459129eaf3eb2b8f1c0f509` passed on both `macos-15-intel` and `macos-15` (Apple Silicon, Rosetta) in this free public-repository cloud run:
+
+https://github.com/HaliosProto/joey-online-rooms/actions/runs/40925805825
+
+The checks build and ad-hoc sign the actual Mac app; verify the pinned Windows ZIP and upstream Wine runtime; prepare a fresh isolated environment using a path containing spaces; launch the original game and confirm its in-memory multiplayer hook; create and release a real DirectInput interface through the Mac proxy; preserve a test file in the save directory; and run the native public-room/relay checks above against the deployed service. Screenshots confirm the game's introductory graphics render on both cloud Mac types.
+
+The Mac prefix preserves Wine's original input module under a separate name and installs the companion at Wine's absolute DirectInput system path. A Wine-only WebSocket close handshake wakes pending synchronous reads, which otherwise hang when leaving a room. The published Windows package is unchanged.
+
+A complete duel, the rendered provider/room menus, audio quality, and real game save/load remain unverified. macOS versions other than 15 and the first-install Rosetta/Gatekeeper prompts on a fresh personal Mac have not been exercised. The Mac app is ad-hoc signed, not Developer ID signed or Apple-notarized. Wine downloads directly from its upstream release at first launch; it is not redistributed inside the Mac ZIP.

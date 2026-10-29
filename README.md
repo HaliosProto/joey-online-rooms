@@ -4,24 +4,31 @@ A native multiplayer companion for Yu-Gi-Oh! Power of Chaos: Joey the Passion, w
 
 ## Download and play
 
-**Full game + configured multiplayer:**
+**Windows: full game + configured multiplayer:**
 https://github.com/HaliosProto/joey-online-rooms/releases/tag/full-game-preview-2
 
 Download **Joey-the-Passion-Online-Full-Game.zip**, extract it completely, and run **joey_pc.exe** from the extracted game folder. The game files, multiplayer companion, cloud endpoint, original readme and new play instructions are included together. This bundles the supplied game folder; it is not the original disc installer.
 
-**Multiplayer-only download for an existing game copy:**
+**Mac: full game + configured multiplayer:**
+https://github.com/HaliosProto/joey-online-rooms/releases/tag/mac-preview-7
+
+Download **Joey-Online-Mac.zip**, extract it, move **Joey Online.app** to Applications and open it. The first launch downloads and verifies the free Wine 11.20 runtime (226 MB); Apple Silicon Macs also use Apple's free Rosetta. No Homebrew or paid compatibility app is required. This compatibility build runs the original Windows game. It was checked on Intel and Apple Silicon cloud Macs running macOS 15. If macOS blocks the app because it is not Apple-notarized, see [Apple's per-app opening instructions](https://support.apple.com/en-us/102445) and the included README-MAC.txt.
+
+Mac and Windows players use the same online room service. Saves and the Mac runtime stay in `~/Library/Application Support/Joey Online/`. The existing Windows download stays available unchanged.
+
+**Windows multiplayer-only download for an existing game copy:**
 https://github.com/HaliosProto/joey-online-rooms/releases/tag/preview-2
 
 For that smaller package, close the game and copy dinput.dll and joey-online.ini beside the supported joey_pc.exe. Do not overwrite another mod's dinput.dll.
 
-Start the original game, open its two-player/LAN multiplayer option, choose **Online rooms** as the connection provider, and create or join a room. Each duel supports one host and one guest. Everyone uses the same companion and endpoint. No GameRanger, VPN, lobby account or router forwarding is required by this implementation. The companion requires Windows 8 or newer.
+Start the original game, open its two-player/LAN multiplayer option, choose **Online rooms** as the connection provider, and create or join a room. Each duel supports one host and one guest. Everyone uses the same companion and endpoint. No GameRanger, VPN, lobby account or router forwarding is required by this implementation. The Windows companion requires Windows 8 or newer; Mac players use the separate app above.
 
 ## Status
 
 The service is deployed at:
 https://joey-online-rooms.joey-online-rooms.workers.dev
 
-Cloud-based tests passed against the live HTTPS service, including native Windows clients. They cover room discovery/creation, two-player joins, capacity, sender identities, session configuration, isolated bidirectional binary relay, nonblocking search cancellation, idle connections and disconnect cleanup. Native builds treat compiler warnings as errors.
+Cloud-based tests passed against the live HTTPS service, including native Windows clients and Wine clients on Intel and Apple Silicon Macs. They cover room discovery/creation, two-player joins, capacity, sender identities, session configuration, isolated bidirectional binary relay, nonblocking search cancellation, idle connections and disconnect cleanup. Native builds treat compiler warnings as errors.
 
 This remains a preview: a complete duel in the original game and the rendered in-game menus have not been verified. Some screens may retain their original LAN wording. Background transport checks do not establish that a full duel finishes correctly. See TESTING.md for exact evidence.
 
@@ -37,7 +44,8 @@ The directory admits at most 20 new rooms per minute and 100 live/reserved rooms
 
 - cloud/: Worker, directory, duel relays and protocol/service tests.
 - native/: native companion, reversible installer and console-only client checks.
-- .github/workflows/: standard GitHub Windows cloud builds and live release verification.
+- macos/: Mac launcher, isolated runtime setup, packaging and cloud Mac qualification.
+- .github/workflows/: standard GitHub Windows and Mac cloud builds and release verification.
 - cloud/DEPLOY.md: free-cloud deployment procedure.
 
 The configured preview was built from source commit 99496c05536da5d47735f3455c30ff47d73a0d8c. Multiplayer builds and transport tests run in the cloud. The full game bundle is a separate release asset; the large game archives are not part of the Git source tree.
@@ -51,7 +59,7 @@ Native: native/Build.ps1 requires Visual Studio C++ Build Tools and a Windows SD
 Supported joey_pc.exe SHA-256:
 c5749eb934a1cf68d9236e44ff81e98b8aaee486b4f8ebd417440505d44ac1ea
 
-The provided installer checks this exact executable, verifies the cloud endpoint, and refuses to overwrite another mod. From native/, run node install.mjs --endpoint https://joey-online-rooms.joey-online-rooms.workers.dev. To remove an unchanged installer-managed installation, run node install.mjs --remove. For manual ZIP installation, close the game and remove only its two companion files.
+The Windows installer checks this exact executable, verifies the cloud endpoint, and refuses to overwrite another mod. From native/, run node install.mjs --endpoint https://joey-online-rooms.joey-online-rooms.workers.dev. To remove an unchanged installer-managed installation, run node install.mjs --remove. For manual Windows ZIP installation, close the game and remove only its two companion files. For Mac, remove the app; keep its Application Support folder to preserve saves.
 
 ## Third-party interfaces
 
