@@ -9,8 +9,8 @@
   if(!rect.width||typeof window._boxedwineEmscriptenMouseButton!=='function')return;
   const gx=Math.max(0,Math.min(target.width-1,Math.round((Math.trunc(x)-rect.left)*target.width/rect.width))),gy=Math.max(0,Math.min(target.height-1,Math.round((Math.trunc(y)-rect.top)*target.height/rect.height)));
   window._boxedwineEmscriptenPointerLock(0);
-  if(type==='mousemove')window._boxedwineEmscriptenMouseMove(gx,gy);
-  else{canvas.focus();window._boxedwineEmscriptenMouseButton(type==='mousedown'?1:0,button===2?1:0,gx,gy);}
+  if(type==='mousemove')(window._joeyTouchMove||window._boxedwineEmscriptenMouseMove)(gx,gy);
+  else{canvas.focus();(window._joeyTouchButton||window._boxedwineEmscriptenMouseButton)(type==='mousedown'?1:0,button===2?1:0,gx,gy);}
  };
  window.joeyFocusTrace=[];
  for(const type of ['focus','blur'])window.addEventListener(type,()=>window.joeyFocusTrace.push({type,time:performance.now()}),true);

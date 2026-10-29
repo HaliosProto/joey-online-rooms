@@ -21,3 +21,10 @@ old='Config.networking = getNetworkingConfig();'
 new='Config.networking = {enabled:true, createTransport:function(api) {return globalThis.createJoeyRoomTransport(api, Module["joeyCloudOrigin"] || "https://joey-online-rooms.joey-online-rooms.workers.dev");}};'
 if s.count(old)!=1: raise RuntimeError('Unexpected browser shell revision')
 p.write_text(s.replace(old,new))
+
+p=Path(sys.argv[1])/'platform'/'sdl'/'knativeinputSDL.cpp'
+s=p.read_text()
+marker='extern "C" EMSCRIPTEN_KEEPALIVE void boxedwineEmscriptenMouseMove'
+if s.count(marker)!=1: raise RuntimeError('Unexpected input source revision')
+s=s.replace(marker,Path(__file__).with_name('touch_input.cpp.inc').read_text()+'\n'+marker)
+p.write_text(s)
