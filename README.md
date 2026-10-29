@@ -29,7 +29,7 @@ https://github.com/HaliosProto/joey-online-rooms/releases/tag/preview-2
 
 For that smaller package, close the game and copy dinput.dll and joey-online.ini beside the supported joey_pc.exe. Do not overwrite another mod's dinput.dll.
 
-Start the original game, open its two-player/LAN multiplayer option, choose **Online rooms** as the connection provider, and create or join a room. Each duel supports one host and one guest. Everyone uses the same companion and endpoint. No GameRanger, VPN, lobby account or router forwarding is required by this implementation. The Windows companion requires Windows 8 or newer; Mac players use the separate app above.
+Start the original game and choose **Duel Mode -> 2-PLAYER DUEL -> Data from your PC**. Confirm your name with the in-game **OK** lever. Select **Host** to create a room or **Guest** to find a room, then use the **OK** lever again. Some dialogs keep their original LAN wording. Each duel supports one host and one guest. Everyone uses the same companion and endpoint. No GameRanger, VPN, lobby account or router forwarding is required by this implementation. The Windows companion requires Windows 8 or newer; Mac players use the separate app above.
 
 ## Status
 
@@ -38,7 +38,7 @@ https://joey-online-rooms.joey-online-rooms.workers.dev
 
 Cloud-based tests passed against the live HTTPS service, including native Windows clients and Wine clients on Intel and Apple Silicon Macs. They cover room discovery/creation, two-player joins, capacity, sender identities, session configuration, isolated bidirectional binary relay, nonblocking search cancellation, idle connections and disconnect cleanup. Native builds treat compiler warnings as errors.
 
-This remains a preview: original-game startup and the mobile main menu render in Chromium and WebKit; a complete duel and the rendered provider/room menus have not been verified. Some screens may retain their original LAN wording. Background transport checks do not establish that a full duel finishes correctly. See TESTING.md for exact evidence.
+This remains a preview: Chromium and WebKit checks navigate the original game by touch through Duel Mode, the data/name screens and Host selection, then require successful room creation and public discovery. A complete duel, the original Guest selection flow and physical phones remain unverified. Some screens retain their original LAN wording. Background transport checks do not establish that a full duel finishes correctly. See TESTING.md for exact evidence.
 
 ## Implementation
 
