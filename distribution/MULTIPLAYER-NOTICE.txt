@@ -1,0 +1,13 @@
+This notice covers the added multiplayer companion. The original game notices
+are retained in ReadMe_Joey.html and the supplied game files.
+
+The unmodified dplay8.h and dpaddr.h interface headers used to compile the
+companion originate from Wine:
+https://github.com/wine-mirror/wine/tree/master/include
+
+Copyright (C) 2003-2005 Raphael Junqueira. Their LGPL 2.1-or-later notices are
+retained in the project source. See COPYING.LIB for the full license text.
+No Wine networking implementation is included.
+
+Companion source and build/test records:
+https://github.com/HaliosProto/joey-online-rooms

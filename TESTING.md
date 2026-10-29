@@ -29,6 +29,6 @@ Verified behaviors:
 
 Remaining qualification:
 
-- Verify the companion loads in the supported original executable, the in-game provider/room screens behave correctly, and a complete duel finishes between two original game instances on separate internet connections. No original game files are uploaded to the public build repository.
+- Verify the companion loads in the supported original executable, the in-game provider/room screens behave correctly, and a complete duel finishes between two original game instances on separate internet connections. No original game files are supplied to the public build workflow.
 
 The original executable and data archives are unchanged. The companion is installed with the verified live endpoint. Background/native tests do not constitute a completed in-game duel.
