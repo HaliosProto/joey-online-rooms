@@ -82,6 +82,12 @@ bool CloudSocket::receive(Bytes& bytes) {
 void CloudSocket::close() {
     std::lock_guard<std::mutex> guard(sendMutex);
     const auto handle = socket.exchange(nullptr);
-    if (handle) WinHttpCloseHandle(handle);
+    if (handle) {
+        // Wine does not cancel a synchronous WebSocket receive when its handle
+        // closes. Send a close frame first so the server wakes the reader.
+        if (GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "wine_get_version"))
+            WinHttpWebSocketShutdown(handle, WINHTTP_WEB_SOCKET_SUCCESS_CLOSE_STATUS, nullptr, 0);
+        WinHttpCloseHandle(handle);
+    }
 }
 }
