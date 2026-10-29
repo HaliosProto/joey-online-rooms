@@ -1,0 +1,20 @@
+name: Build mobile native companion
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - shell: pwsh
+        run: ./native/Build.ps1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mobile-native
+          path: |
+            native/build/native-check.exe
+            native/build/dinput.dll
+          retention-days: 2

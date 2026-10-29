@@ -2,6 +2,9 @@ name: Build and publish mobile preview
 on:
   workflow_dispatch:
     inputs:
+      native_run:
+        type: string
+        default: ""
       engine_run:
         type: string
         default: "40939175466"
@@ -30,7 +33,7 @@ jobs:
         with:
           name: mobile-native
           path: mobile-native
-          run-id: ${{ inputs.engine_run }}
+          run-id: ${{ inputs.native_run || inputs.engine_run }}
           github-token: ${{ github.token }}
       - name: Assemble verified original game and mobile interface
         run: python3 mobile/prepare_site.py --engine browser-runtime --native mobile-native --output mobile-web

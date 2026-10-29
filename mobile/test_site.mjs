@@ -30,5 +30,6 @@ try{
  // The game's Wine prefix uses persistent storage rather than memory-only launch.
  if(!logs.some(l=>l.includes('Use Root FS storage mode: INDEXED_DB')))throw new Error('Game saves are not configured for persistent storage');
  await page.locator('#name').click();await page.locator('#typed').fill('Friend');await page.locator('#send-text').click();await page.locator('#back').click();
+ if(logs.some(l=>/Unhandled page fault|Unhandled exception|starting debugger/.test(l)))throw new Error('Original game crashed while entering multiplayer');
  if(errors.length)throw new Error(errors.join('\n'));writeFileSync('mobile-test-results/site-result.txt','PASS: installed-style mobile UI downloads and caches assets, launches original game with persistent storage, and forwards left/right touch input. Physical devices and complete duels remain unverified.\n');
 }finally{writeFileSync('mobile-test-results/site-browser.txt',logs.join('\n')+'\n'+errors.join('\n'));await page.screenshot({path:'mobile-test-results/site-final.png'}).catch(()=>{});await browser.close();server.close();}
