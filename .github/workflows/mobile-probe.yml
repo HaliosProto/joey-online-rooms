@@ -33,6 +33,8 @@ jobs:
         with:
           name: mobile-native
           path: mobile-native
+      - name: Connect the fixed cloud room transport
+        run: python3 mobile/patch_engine.py boxedwine
       - name: Install pinned WebAssembly compiler
         run: |
           git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"

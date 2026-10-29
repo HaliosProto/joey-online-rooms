@@ -32,6 +32,9 @@ text=shell.read_text()
 text=text.replace('Config.envProp = getEnvProp();', 'Config.envProp = "WINEDLLOVERRIDES=dinput=n,b;mscoree,mshtml=";')
 text=text.replace('let params = ["-root", ROOT];', 'let params = ["-root", ROOT, "-env", "WINEDEBUG=+debugstr"];')
 shell.write_text(text)
+shutil.copyfile(Path(__file__).with_name('room-transport.js'),a.output/'room-transport.js')
+html=a.output/'boxedwine.html'
+html.write_text(html.read_text().replace('<script src=boxedwine-shell.js>', '<script src=room-transport.js></script><script src=boxedwine-shell.js>'))
 shutil.copyfile(root,a.output/'runtime.zip')
 with zipfile.ZipFile(root) as z:
     candidates=[n for n in z.namelist() if n.endswith('/dinput.dll')]
