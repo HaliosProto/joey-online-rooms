@@ -1,0 +1,32 @@
+name: Upload qualified Mac release assets
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify qualified build provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api repos/HaliosProto/joey-online-rooms/actions/runs/40925805825 --jq .head_sha)" = '683d5b4766ca6b9f5459129eaf3eb2b8f1c0f509'
+          gh api repos/HaliosProto/joey-online-rooms/actions/runs/40925805825/jobs --jq '[.jobs[]|select(.name=="mac (macos-15-intel)" or .name=="mac (macos-15)")|.conclusion] | length==2 and all(.=="success")' | grep -x true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mac-game-download
+          path: package
+          run-id: 40925805825
+          github-token: ${{ github.token }}
+      - name: Upload verified assets to the existing Mac draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd package
+          sha256sum -c Joey-Online-Mac.sha256
+          python3 ../tools/upload_release_asset.py --repo HaliosProto/joey-online-rooms --tag mac-preview-7 --release-id 428225830 --file Joey-Online-Mac.zip --bytes-per-second 20971520
+          python3 ../tools/upload_release_asset.py --repo HaliosProto/joey-online-rooms --tag mac-preview-7 --release-id 428225830 --file Joey-Online-Mac.sha256 --bytes-per-second 20971520

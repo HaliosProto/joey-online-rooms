@@ -62,22 +62,3 @@ jobs:
             Joey-Online-Mac.zip
             Joey-Online-Mac.sha256
           retention-days: 2
-  release:
-    needs: mac
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: mac-game-download
-          path: package
-      - name: Create separate draft Mac release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cd package
-          sha256sum -c Joey-Online-Mac.sha256
-          gh release create "mac-preview-$GITHUB_RUN_NUMBER" Joey-Online-Mac.zip Joey-Online-Mac.sha256 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease --title 'Mac game + online multiplayer preview' --notes-file ../macos/release-notes.md

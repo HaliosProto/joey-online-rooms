@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import mimetypes
+import shutil
 from pathlib import Path
 import subprocess
 import time
@@ -16,7 +17,7 @@ parser.add_argument('--release-id', type=int)
 parser.add_argument('--file', type=Path, required=True)
 parser.add_argument('--bytes-per-second', type=int, default=1024 * 1024)
 args = parser.parse_args()
-gh = r'C:\Program Files\GitHub CLI\gh.exe'
+gh = shutil.which('gh') or r'C:\Program Files\GitHub CLI\gh.exe'
 asset = args.file.resolve(strict=True)
 if args.bytes_per_second < 1:
     raise SystemExit('The bandwidth limit must be positive.')
