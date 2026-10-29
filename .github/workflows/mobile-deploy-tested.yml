@@ -38,7 +38,7 @@ jobs:
         with:
           name: github-pages
           path: verified-pages/artifact.tar
-          retention-days: 7
+          retention-days: 1
           compression-level: 0
       - name: Publish the verified site without rebuilding it
         id: deployment
