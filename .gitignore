@@ -19,3 +19,9 @@ network-disassembly.txt
 native/test-output/
 native/cloud-release/
 bundles/
+
+mobile/android/.gradle/
+mobile/android/**/build/
+mobile/android/local.properties
+*.p12
+*.keystore
