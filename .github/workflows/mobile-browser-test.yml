@@ -1,0 +1,38 @@
+name: Test cached mobile browser runtime
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mobile-browser-runtime
+          path: browser-runtime
+          run-id: 40932817574
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mobile-native
+          path: mobile-native
+          run-id: 40932817574
+          github-token: ${{ github.token }}
+      - name: Prepare verified game files
+        run: python3 mobile/prepare_probe.py --engine browser-runtime --native mobile-native --output mobile-web
+      - name: Install cloud browser tooling
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Exercise the original game in the browser
+        run: node mobile/probe_browser.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: mobile-browser-results
+          path: mobile-test-results/
+          retention-days: 7

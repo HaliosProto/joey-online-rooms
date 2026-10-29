@@ -22,12 +22,11 @@ page.on('console',m=>{lines.push(m.text()); if(lines.length%100===0) console.log
 page.on('pageerror',e=>{errors.push(String(e));console.error('Page error:',String(e));});
 page.on('crash',()=>errors.push('Browser page crashed'));
 try{
- const params=new URLSearchParams({root:'runtime',app:'game',overlay:'online',p:'joey/joey_pc.exe',w:'c:/files/joey',registry:'gdi,win10,mousewarp-disable','wine-override':'nomono',env:'WINEDLLOVERRIDES:dinput=n,b;mscoree,mshtml=','auto':'false',storage:'memory'});
+ const params=new URLSearchParams({root:'runtime',app:'game',overlay:'online',p:'joey/joey_pc.exe',w:'c:/files/joey',registry:'gdi,win10,mousewarp-disable','wine-override':'nomono',env:'"WINEDLLOVERRIDES:dinput=n,b;mscoree,mshtml="','auto':'false',storage:'memory'});
  await page.goto('http://127.0.0.1:8765/boxedwine.html?'+params,{waitUntil:'domcontentloaded',timeout:60000});
  console.log('Controls:',await page.locator('button,input[type=button]').allTextContents());
- const start=page.getByRole('button',{name:/^start$/i});
- if(await start.count()) await start.click();
- else await page.locator('#startButton').click();
+ await page.locator('#startbtn').waitFor({state:'visible',timeout:180000});
+ await page.locator('#startbtn').click();
  const until=Date.now()+12*60*1000;
  while(Date.now()<until){
    await new Promise(r=>setTimeout(r,10000));
