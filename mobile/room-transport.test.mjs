@@ -6,7 +6,7 @@ function fixture(platform={}) {
   const heap=new Uint8Array(1048576);const notifications=[];let next=0;
   const api={heap:()=>heap,allocateSocket:()=>++next,setEvents:(...args)=>notifications.push(args)};
   const transport=globalThis.createJoeyRoomTransport(api,'https://rooms.example',platform);
-  const socket=()=>{const id=transport.socket(2,1,0);assert.equal(transport.connect(id,0x7f000001,80),0);return id;};
+  const socket=()=>{const id=transport.socket(2,1,0);assert.equal(transport.connect(id,0x0100007f,80),0);return id;};
   const send=(id,value)=>{const bytes=typeof value==='string'?encode.encode(value):value;heap.set(bytes,0);return transport.send(id,0,bytes.length);};
   const recv=(id,limit=65536,flags=0)=>{const n=transport.recv(id,0,limit,flags);return n>=0?heap.slice(0,n):n;};
   return {transport,socket,send,recv,heap,notifications};
@@ -15,7 +15,7 @@ const tick=()=>new Promise(r=>setImmediate(r));
 test('virtual sockets reject internet destinations and UDP',()=>{
  const f=fixture();assert.equal(f.transport.socket(2,2,0),-97);
  const id=f.transport.socket(2,1,0);assert.equal(f.transport.connect(id,0x08080808,80),-101);
- assert.equal(f.transport.connect(id,0x7f000001,443),-101);
+ assert.equal(f.transport.connect(id,0x0100007f,443),-101);
 });
 test('split HTTP requests preserve binary bodies and buffered peek/read behavior',async()=>{
  let seen;

@@ -21,7 +21,7 @@ test('browser virtual sockets interoperate with a native-protocol guest on the r
   }
  });
  const ids=[];let guest;
- function socket(){const id=transport.socket(2,1,0);ids.push(id);assert.equal(transport.connect(id,0x7f000001,80),0);return id;}
+ function socket(){const id=transport.socket(2,1,0);ids.push(id);assert.equal(transport.connect(id,0x0100007f,80),0);return id;}
  function send(id,bytes){if(typeof bytes==='string')bytes=enc.encode(bytes);heap.set(bytes);assert.equal(transport.send(id,0,bytes.length),bytes.length);}
  function receive(id){const count=transport.recv(id,0,65536,0);if(count===-11)return null;if(count<0)throw new Error('Virtual socket error '+count);return heap.slice(0,count);}
  function concat(a,b){const out=new Uint8Array(a.length+b.length);out.set(a);out.set(b,a.length);return out;}

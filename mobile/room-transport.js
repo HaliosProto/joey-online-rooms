@@ -159,9 +159,11 @@ globalThis.createJoeyRoomTransport = function (api, endpoint, platform = globalT
       const s = { id, rx: [], rxBytes: 0, tx: new Uint8Array(), events: 0, error: 0, closed: false, mode: 'http', fragments: [], fragmentBytes: 0 };
       sockets.set(id, s); return id;
     },
+    // BoxedWine passes in_addr.s_addr as a little-endian x86 integer.
     connect(id, ipv4, port) {
       const s = sockets.get(id); if (!s) return -107;
-      if ((ipv4 >>> 0) !== 0x7f000001 || port !== 80) { s.error = 101; events(s); return -101; }
+      platform.console?.debug?.('Joey room socket destination', ipv4 >>> 0, port);
+      if ((ipv4 >>> 0) !== 0x0100007f || port !== 80) { s.error = 101; events(s); return -101; }
       s.peer = ipv4 >>> 0; s.port = port; events(s); return 0;
     },
     send(id, buffer, length) {
@@ -191,7 +193,7 @@ globalThis.createJoeyRoomTransport = function (api, endpoint, platform = globalT
     readableBytes(id) { return sockets.get(id)?.rxBytes ?? 0; },
     getPeerIpv4(id) { return sockets.get(id)?.peer ?? 0; },
     getPeerPort(id) { return sockets.get(id)?.port ?? 0; },
-    getLocalIpv4() { return 0x7f000001; },
+    getLocalIpv4() { return 0x0100007f; },
     getLocalPort(id) { return 40000 + (id % 10000); },
     setsockopt() { return 0; }, bind() { return -97; }, listen() { return -97; }, accept() { return -97; },
   };
