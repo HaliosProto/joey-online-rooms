@@ -8,5 +8,5 @@
  canvas.addEventListener('pointerup',release,{passive:false});canvas.addEventListener('pointercancel',release,{passive:false});
  window.joeyKey=(key,code,keyCode)=>{canvas.focus();const opts={bubbles:true,cancelable:true,key,code,keyCode,which:keyCode};document.dispatchEvent(new KeyboardEvent('keydown',opts));setTimeout(()=>document.dispatchEvent(new KeyboardEvent('keyup',opts)),80);};
  window.joeyType=character=>{canvas.focus();document.dispatchEvent(new KeyboardEvent('keypress',{bubbles:true,cancelable:true,key:character,charCode:character.codePointAt(0),keyCode:character.codePointAt(0),which:character.codePointAt(0)}));};
- const originalPrint=Module.print;Module.print=function(...args){originalPrint?.(...args);const text=args.join(' ');if(text.includes('integrated cloud networking enabled'))parent.postMessage({type:'joey-status',text:'Tap to click · drag cards · Right click for the next tap'},location.origin);};
+ const originalPrint=Module.print;Module.print=function(...args){originalPrint?.(...args);const text=args.join(' ');if(text.includes('integrated cloud networking enabled'))parent.postMessage({type:'joey-status',text:'Tap to click / drag cards / Right click for the next tap'},location.origin);};
 })();

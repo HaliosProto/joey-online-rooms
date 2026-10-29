@@ -19,9 +19,19 @@ for size in (192,512):
     def chunk(kind,data):return struct.pack('>I',len(data))+kind+data+struct.pack('>I',zlib.crc32(kind+data)&0xffffffff)
     png=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',size,size,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(pixels))+chunk(b'IEND',b'')
     (out/f'icon-{size}.png').write_bytes(png)
+# Browser caches handle small resumable files more reliably than a single 468 MB entry.
+virtual={}
+for name in ('game.zip','runtime.zip'):
+    original=out/name;parts=[];size=original.stat().st_size
+    with original.open('rb') as stream:
+        index=0
+        while data:=stream.read(16*1024*1024):
+            part=f'{name}.part{index:03d}';(out/part).write_bytes(data);parts.append(part);index+=1
+    virtual[name]={'parts':parts,'bytes':size};original.unlink()
+sw=out/'sw.js';sw.write_text(sw.read_text().replace('const VIRTUAL={};','const VIRTUAL='+json.dumps(virtual)+';'))
 manifest=[]
 for f in sorted(out.iterdir()):
-    if f.is_file() and f.suffix in ('.js','.css','.wasm','.zip','.png') and f.name not in ('sw.js','online.zip'):
+    if f.is_file() and (f.suffix in ('.js','.css','.wasm','.zip','.png') or '.part' in f.name) and f.name not in ('sw.js','online.zip'):
         with f.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
         manifest.append({'path':f.name,'bytes':f.stat().st_size,'sha256':digest})
 (out/'assets.json').write_text(json.dumps(manifest,indent=2))
