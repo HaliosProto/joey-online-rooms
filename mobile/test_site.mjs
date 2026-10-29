@@ -1,3 +1,4 @@
+import {PNG} from 'pngjs';
 import {chromium} from 'playwright';
 import {createServer} from 'node:http';import{createReadStream,statSync,mkdirSync,writeFileSync}from'node:fs';import{resolve,extname,sep}from'node:path';
 const root=resolve('mobile-web');mkdirSync('mobile-test-results',{recursive:true});
@@ -14,7 +15,12 @@ try{
  const frame=page.frames().find(f=>f.url().includes('boxedwine.html'));if(!frame)throw new Error('Missing game frame');
  // Touch input must arrive as real mouse events at the emulator's scaled canvas.
  await frame.evaluate(()=>{window.testTouch=[];const name=typeof window._joeyTouchButton==='function'?'_joeyTouchButton':'_boxedwineEmscriptenMouseButton';const native=window[name];if(typeof native!=='function')throw new Error('Native input export missing');window[name]=function(down,button,x,y){window.testTouch.push({type:down?'mousedown':'mouseup',button,x,y,time:performance.now()});return native(down,button,x,y);};});
- const canvas=frame.locator('#canvas'),box=await canvas.boundingBox();await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.57);await new Promise(r=>setTimeout(r,8000));await page.screenshot({path:'mobile-test-results/mobile-duel-mode.png'});
+ const canvas=frame.locator('#canvas'),box=await canvas.boundingBox();const before=PNG.sync.read(await canvas.screenshot());await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.57);await new Promise(r=>setTimeout(r,8000));await page.screenshot({path:'mobile-test-results/mobile-duel-mode.png'});
+ const after=PNG.sync.read(await canvas.screenshot());
+ function changed(rect){let n=0,total=0;for(let y=Math.floor(before.height*rect[1]);y<before.height*rect[3];y++)for(let x=Math.floor(before.width*rect[0]);x<before.width*rect[2];x++){const at=(y*before.width+x)*4;if(Math.abs(before.data[at]-after.data[at])+Math.abs(before.data[at+1]-after.data[at+1])+Math.abs(before.data[at+2]-after.data[at+2])>90)n++;total++;}return n/total;}
+ const logoChange=changed([.12,.08,.88,.48]),menuChange=changed([.25,.75,.75,.94]);console.log('Rendered menu transition:',{logoChange,menuChange});
+ if(logoChange>.02||menuChange<.08)throw new Error('Touch did not open Duel Mode while preserving the game logo');
+
  await page.mouse.click(box.x+box.width*.5,box.y+box.height*.90,{delay:500});await new Promise(r=>setTimeout(r,3000));await page.screenshot({path:'mobile-test-results/menu-mouse.png'});await page.locator('#enter').click();await new Promise(r=>setTimeout(r,4000));await page.screenshot({path:'mobile-test-results/menu-enter.png'});
  const events=await frame.evaluate(()=>({events:window.testTouch,focus:window.joeyFocusTrace,controls:typeof window.joeyKey,canvas:document.getElementById('canvas').getBoundingClientRect().toJSON()}));console.log('Touch diagnostics:',JSON.stringify(events));const touchEvents=events.events;if(!touchEvents.some(e=>e.type==='mousedown'&&e.button===0)||!touchEvents.some(e=>e.type==='mouseup'))throw new Error('Touch did not create complete mouse input');
  await page.locator('#right').click();await page.touchscreen.tap(box.x+box.width*.5,box.y+box.height*.5);await new Promise(r=>setTimeout(r,800));if(await page.locator('#right').getAttribute('aria-pressed')!=='false')throw new Error('One-shot right click did not reset');

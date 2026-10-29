@@ -36,7 +36,7 @@ jobs:
         run: python3 mobile/prepare_site.py --engine browser-runtime --native mobile-native --output mobile-web
       - name: Install cloud browser tooling
         run: |
-          npm install --no-save playwright@1.56.1
+          npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install --with-deps chromium
       - name: Test actual mobile game and touch controls
         run: node mobile/test_site.mjs
