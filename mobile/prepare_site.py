@@ -29,11 +29,18 @@ for name in ('game.zip','runtime.zip'):
             part=f'{name}.part{index:03d}';(out/part).write_bytes(data);parts.append(part);index+=1
     virtual[name]={'parts':parts,'bytes':size};original.unlink()
 sw=out/'sw.js';sw.write_text(sw.read_text().replace('const VIRTUAL={};','const VIRTUAL='+json.dumps(virtual)+';'))
+# A new front-end filename reaches existing installations even before the new worker activates.
+for name in ('mobile.js','mobile.css'):
+    source=out/name;digest=hashlib.sha256(source.read_bytes()).hexdigest()[:12];target=f'mobile-{digest}{source.suffix}';source.rename(out/target)
+    index=out/'index.html';index.write_text(index.read_text().replace(name,target))
+    if name.endswith('.css'):
+        credits=out/'licenses.html';credits.write_text(credits.read_text().replace(name,target))
 manifest=[]
 for f in sorted(out.iterdir()):
     if f.is_file() and (f.suffix in ('.js','.css','.wasm','.zip','.png') or '.part' in f.name) and f.name not in ('sw.js','online.zip'):
         with f.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
         manifest.append({'path':f.name,'bytes':f.stat().st_size,'sha256':digest})
+sw.write_text(sw.read_text().replace('const ASSETS={};','const ASSETS='+json.dumps({f['path']:f['sha256'] for f in manifest})+';'))
 (out/'assets.json').write_text(json.dumps(manifest,indent=2))
 (out/'.nojekyll').touch()
 print('Site bytes:',sum(f.stat().st_size for f in out.iterdir() if f.is_file()),flush=True)

@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
 const message=$('message'),button=$('prepare'),progress=$('download'),frame=$('game');
 let started=false,right=false;
-const CACHE='joey-mobile-preview-1';
+const CACHE='joey-mobile-assets-v2';
 async function prepare(){
  button.disabled=true;progress.hidden=false;
  try{
@@ -14,13 +14,14 @@ async function prepare(){
   if(estimate?.quota && estimate.quota-estimate.usage<total*1.2)message.textContent='Storage is low. Free about 1 GB if the download fails.';
   await navigator.storage?.persist?.().catch(()=>false);const cache=await caches.open(CACHE);
   for(const asset of manifest){
-   const url=new URL(asset.path,location.href);const existing=await cache.match(url);
+   const url=new URL(asset.path,location.href);url.searchParams.set('sha256',asset.sha256);const existing=await cache.match(url);
    if(existing){done+=asset.bytes;progress.value=done/total;continue;}
    message.textContent='Downloading game: '+Math.round(done/total*100)+'%';
    const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('Download failed. Try again; completed files are kept.');
    let received=0;const meter=new TransformStream({transform(chunk,controller){received+=chunk.byteLength;progress.value=(done+received)/total;message.textContent='Downloading game: '+Math.min(100,Math.round((done+received)/total*100))+'%';controller.enqueue(chunk);}});
    await cache.put(url,new Response(response.body.pipeThrough(meter),{status:200,headers:response.headers}));done+=asset.bytes;
   }
+  await caches.delete('joey-mobile-preview-1');
   button.textContent='Start game';button.disabled=false;button.onclick=startGame;progress.hidden=true;message.textContent='Ready. Startup can take several minutes. Your saves stay on this device.';
  }catch(error){message.textContent=error.message;button.textContent='Try again';button.disabled=false;}
 }
