@@ -18,7 +18,7 @@ app = args.output / 'Joey Online.app'
 app.mkdir(parents=True, exist_ok=False)
 contents = app / 'Contents'
 resources = contents / 'Resources'
-resources.mkdir()
+resources.mkdir(parents=True)
 (contents / 'MacOS').mkdir()
 with zipfile.ZipFile(args.game_zip) as archive:
     archive.extractall(args.output / 'extracted')
