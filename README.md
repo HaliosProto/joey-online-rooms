@@ -1,36 +1,41 @@
-# Integrated multiplayer investigation
+# Joey Online Rooms
 
-Requested: an in-game public room browser, hosting and joining over the internet, no external player client, and no paid services.
+An in-game multiplayer companion for Yu-Gi-Oh! Power of Chaos: Joey the Passion, with a shared public room directory and an HTTPS/WebSocket relay on Cloudflare Workers Free.
 
-Status: investigation only. The integrated mod is not implemented or installed. The discarded GameRanger launcher has been removed. Original game files remain unpatched.
+## Status
 
-The game is a 32-bit Windows executable with DirectPlay 8 peer networking. Static inspection located peer creation, host discovery, joining, and receive callbacks. These are possible integration points for an internet lobby and relay while retaining the existing duel rules. Runtime verification remains necessary: the game starts from its own folder, but current captured frames are black.
+This is a pre-release implementation. The backend passes local packet and live-service tests. The native x86 module compiles with warnings treated as errors. Cloud-based native integration tests are being established. A production cloud deployment and a complete duel in the original game have not yet been verified. Do not treat this as a finished, playable release.
 
-Executable SHA-256: c5749eb934a1cf68d9236e44ff81e98b8aaee486b4f8ebd417440505d44ac1ea
+## Intended player experience
 
-Key addresses (preferred image base 0x00400000):
-- DirectPlay8Peer class identifier: file offset 0x1DDB00.
-- Peer creation: 0x004436AD via CoCreateInstance pointer 0x005DA338.
-- Peer callback: 0x00443760, dispatching to 0x00443AA0.
-- Discovery helper: 0x004014E0; EnumHosts via peer vtable offset 0x64.
-- Join helper: 0x004013D0; Connect via peer vtable offset 0x18.
-- Peer information callbacks: GetPeerInfo via vtable offset 0x54.
+Launch the original game, open its two-player multiplayer screen, and choose **Online rooms** as the connection provider. Create a room or select another player's room from the game's existing list. Each duel is one against one. Players need the same companion module and cloud endpoint; they do not need GameRanger, a VPN, a separate account for the lobby, or router port forwarding.
 
-network-disassembly.txt contains the inspected helper code. native/dplay8.h and native/dpaddr.h come from Wine and retain their original LGPL notices.
+The module integrates at the game's DirectPlay 8 interface and relays opaque duel payloads. It does not replace the game rules, unlock cards, or provide anti-cheat. The existing screen may still contain the original LAN wording; menu rendering still needs an in-game check.
 
-A common public room list needs a shared internet-reachable service. A PC-hosted service requires the owner's PC to stay online. A free cloud service requires an account and obeys its free quotas. No production service has been deployed.
+## Components
 
-Cloudflare quotas checked October 29, 2026:
-- Workers Free: 100,000 requests/day, shared across the account.
-- Durable Objects Free: 100,000 metered requests/day and 13,000 GB-seconds/day.
-- Incoming WebSocket messages count at a 20:1 request billing ratio.
-- Exceeding a Free-plan quota causes affected operations to fail. Daily quotas reset at 00:00 UTC. Do not enable a paid plan for this project.
-- A room directory for a small friend group should fit readily. Full duel relay capacity needs measurement of the game's actual traffic.
+- cloud/: public directory, per-duel relays, protocol checks and live-service tests.
+- native/: reversible dinput.dll companion, DirectPlay-compatible interfaces, and a console-only native integration check.
+- .github/workflows/check.yml: build and test on a standard GitHub Windows cloud runner. No original game files are uploaded.
 
-Next: verify baseline gameplay, trace Host/SendTo/Close and callback lifetime rules, implement and test the directory/relay locally, integrate the native networking calls, verify a complete duel between two game instances, then deploy to a confirmed free account and test separate internet connections.
+The directory supports up to 100 live/reserved rooms per game ID, with creation limited to 20 rooms per minute per game ID. Each room accepts one host and one guest. Disconnected rooms expire and are removed. Free cloud quotas remain shared with other applications in the same account.
 
-Sources:
-https://developers.cloudflare.com/workers/platform/limits/
-https://developers.cloudflare.com/durable-objects/platform/pricing/
-https://github.com/wine-mirror/wine/blob/master/include/dplay8.h
-https://github.com/wine-mirror/wine/blob/master/include/dpaddr.h
+## Build and validate
+
+Backend: npm ci, npm run types, npm run check, npm test from cloud/.
+
+Native: run native/Build.ps1 with Visual Studio C++ Build Tools and a Windows SDK installed. Run native/build/native-check.exe against a local development endpoint or the deployed HTTPS endpoint. It creates and joins a room, checks player identities and capacity, sends binary payloads in both directions, and checks disconnect propagation without opening the game.
+
+See cloud/DEPLOY.md for strictly free cloud setup. Do not enable a paid plan.
+
+## Install after deployment and qualification
+
+From native/, run node install.mjs --endpoint https://YOUR-VERIFIED-ENDPOINT. The installer requires the exact supported executable, checks the cloud service, refuses to overwrite another mod, and leaves the original game executable and data archives unchanged. It has not been run on the original game folder yet.
+
+To remove an unchanged installation, run node install.mjs --remove. The module and its configuration are the only game-folder additions.
+
+Supported executable SHA-256: c5749eb934a1cf68d9236e44ff81e98b8aaee486b4f8ebd417440505d44ac1ea
+
+## Third-party interfaces
+
+The two DirectPlay interface headers retain their Wine copyright and LGPL notices; see native/NOTICE.md and native/COPYING.LIB. Original game executables, assets, and extracted disassembly are excluded from this repository.

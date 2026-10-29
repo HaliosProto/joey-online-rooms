@@ -10,6 +10,7 @@ cloud/test-service.pid
 *.ilk
 *.exp
 *.lib
+!native/COPYING.LIB
 *.exe
 *.dll
 *.log

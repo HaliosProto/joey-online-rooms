@@ -6,6 +6,7 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "node --test test/*.test.mjs",
+    "test:integration": "node test/run-integration.mjs",
     "dev": "wrangler dev --local --port 8787",
     "types": "wrangler types",
     "deploy": "wrangler deploy"
