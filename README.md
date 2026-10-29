@@ -1,41 +1,53 @@
 # Joey Online Rooms
 
-An in-game multiplayer companion for Yu-Gi-Oh! Power of Chaos: Joey the Passion, with a shared public room directory and an HTTPS/WebSocket relay on Cloudflare Workers Free.
+A native multiplayer companion for Yu-Gi-Oh! Power of Chaos: Joey the Passion, with public rooms and a cloud relay.
+
+## Download and play
+
+Preview download:
+https://github.com/HaliosProto/joey-online-rooms/releases/tag/preview-2
+
+Close the game, read the included README, then copy dinput.dll and joey-online.ini beside the supported joey_pc.exe. Do not overwrite another mod's dinput.dll. The local task installation has already been configured; the download is for other players.
+
+Start the original game, open its two-player/LAN multiplayer option, choose **Online rooms** as the connection provider, and create or join a room. Each duel supports one host and one guest. Everyone uses the same companion and endpoint. No GameRanger, VPN, lobby account or router forwarding is required by this implementation. The companion requires Windows 8 or newer.
 
 ## Status
 
-This is a pre-release implementation. The backend and native x86 module pass cloud-based checks, including public discovery, hosting/joining, player IDs, capacity, bidirectional relay payloads, nonblocking cancellation, idle connections and disconnects. Native builds treat compiler warnings as errors. A production cloud deployment and a complete duel in the original game have not yet been verified. Do not treat this as a finished, playable release.
+The service is deployed at:
+https://joey-online-rooms.joey-online-rooms.workers.dev
 
-## Intended player experience
+Cloud-based tests passed against the live HTTPS service, including native Windows clients. They cover room discovery/creation, two-player joins, capacity, sender identities, session configuration, isolated bidirectional binary relay, nonblocking search cancellation, idle connections and disconnect cleanup. Native builds treat compiler warnings as errors.
 
-Launch the original game, open its two-player multiplayer screen, and choose **Online rooms** as the connection provider. Create a room or select another player's room from the game's existing list. Each duel is one against one. Players need the same companion module and cloud endpoint; they do not need GameRanger, a VPN, a separate account for the lobby, or router port forwarding.
+This remains a preview: a complete duel in the original game and the rendered in-game menus have not been verified. Some screens may retain their original LAN wording. Background transport checks do not establish that a full duel finishes correctly. See TESTING.md for exact evidence.
 
-The module integrates at the game's DirectPlay 8 interface and relays opaque duel payloads. It does not replace the game rules, unlock cards, or provide anti-cheat. The existing screen may still contain the original LAN wording; menu rendering still needs an in-game check.
+## Implementation
 
-## Components
+The companion integrates at the existing game's DirectPlay 8 interface. Its DirectInput proxy forwards ordinary input to the Windows system DLL and enables the online networking replacement only for the inspected executable. It does not modify the original executable or data archives, replace game rules, unlock cards, or provide anti-cheat.
 
-- cloud/: public directory, per-duel relays, protocol checks and live-service tests.
-- native/: reversible dinput.dll companion, DirectPlay-compatible interfaces, and a console-only native integration check.
-- .github/workflows/check.yml: build and test on a standard GitHub Windows cloud runner. No original game files are uploaded.
+The cloud directory lists live rooms; separate SQLite-backed Durable Objects relay each duel using hibernating WebSockets. A room accepts one host and one guest. Sender identity is server-assigned, host credentials are random and hashed, packets are bounded, and closed rooms expire. Host session configuration is preserved for joining players.
 
-The directory supports up to 100 live/reserved rooms per game ID, with creation limited to 20 rooms per minute per game ID. Each room accepts one host and one guest. Disconnected rooms expire and are removed. Free cloud quotas remain shared with other applications in the same account.
+The directory admits at most 20 new rooms per minute and 100 live/reserved rooms per game ID. These application limits are separate from the hosting provider's free quotas, which are shared across the account. The project does not enable paid billing; exhausted free quotas can interrupt service.
 
-## Build and validate
+## Source and maintenance
 
-Backend: npm ci, npm run types, npm run check, npm test from cloud/.
+- cloud/: Worker, directory, duel relays and protocol/service tests.
+- native/: native companion, reversible installer and console-only client checks.
+- .github/workflows/: standard GitHub Windows cloud builds and live release verification.
+- cloud/DEPLOY.md: free-cloud deployment procedure.
 
-Native: run native/Build.ps1 with Visual Studio C++ Build Tools and a Windows SDK installed. Run native/build/native-check.exe against a local development endpoint or the deployed HTTPS endpoint. It creates and joins a room, checks player identities and capacity, sends binary payloads in both directions, and checks disconnect propagation without opening the game.
+The configured preview was built from source commit 99496c05536da5d47735f3455c30ff47d73a0d8c. Tests and packaging run in the cloud; no original game files are uploaded to this repository.
 
-See cloud/DEPLOY.md for strictly free cloud setup. Do not enable a paid plan.
+Backend: npm ci, npm run types, npm run check, npm test from cloud/. Use npm run test:integration to run local service checks without opening the game.
 
-## Install after deployment and qualification
+Native: native/Build.ps1 requires Visual Studio C++ Build Tools and a Windows SDK. native/build/native-check.exe accepts a local development URL or the deployed HTTPS origin and tests the two native peers without a game window.
 
-From native/, run node install.mjs --endpoint https://YOUR-VERIFIED-ENDPOINT. The installer requires the exact supported executable, checks the cloud service, refuses to overwrite another mod, and leaves the original game executable and data archives unchanged. It has not been run on the original game folder yet.
+## Supported executable and removal
 
-To remove an unchanged installation, run node install.mjs --remove. The module and its configuration are the only game-folder additions.
+Supported joey_pc.exe SHA-256:
+c5749eb934a1cf68d9236e44ff81e98b8aaee486b4f8ebd417440505d44ac1ea
 
-Supported executable SHA-256: c5749eb934a1cf68d9236e44ff81e98b8aaee486b4f8ebd417440505d44ac1ea
+The provided installer checks this exact executable, verifies the cloud endpoint, and refuses to overwrite another mod. From native/, run node install.mjs --endpoint https://joey-online-rooms.joey-online-rooms.workers.dev. To remove an unchanged installer-managed installation, run node install.mjs --remove. For manual ZIP installation, close the game and remove only its two companion files.
 
 ## Third-party interfaces
 
-The two DirectPlay interface headers retain their Wine copyright and LGPL notices; see native/NOTICE.md and native/COPYING.LIB. Original game executables, assets, and extracted disassembly are excluded from this repository.
+The DirectPlay interface headers retain their Wine copyright and LGPL notices; see native/NOTICE.md and native/COPYING.LIB. Original game executables, assets, extracted disassembly and personal account details are excluded from this repository.
