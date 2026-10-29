@@ -12,6 +12,7 @@ import urllib.request
 parser = argparse.ArgumentParser()
 parser.add_argument('--repo', required=True)
 parser.add_argument('--tag', required=True)
+parser.add_argument('--release-id', type=int)
 parser.add_argument('--file', type=Path, required=True)
 parser.add_argument('--bytes-per-second', type=int, default=1024 * 1024)
 args = parser.parse_args()
@@ -19,9 +20,12 @@ gh = r'C:\Program Files\GitHub CLI\gh.exe'
 asset = args.file.resolve(strict=True)
 if args.bytes_per_second < 1:
     raise SystemExit('The bandwidth limit must be positive.')
+release_endpoint = f'repos/{args.repo}/releases/{args.release_id}' if args.release_id else f'repos/{args.repo}/releases/tags/{args.tag}'
 release = json.loads(subprocess.run(
-    [gh, 'api', f'repos/{args.repo}/releases/tags/{args.tag}'],
+    [gh, 'api', release_endpoint],
     check=True, capture_output=True, text=True).stdout)
+if release['tag_name'] != args.tag:
+    raise SystemExit('The release ID does not match the requested tag.')
 upload_url = release['upload_url'].split('{', 1)[0]
 parts = urllib.parse.urlsplit(upload_url)
 if parts.scheme != 'https' or parts.hostname != 'uploads.github.com' or parts.username or parts.password:
