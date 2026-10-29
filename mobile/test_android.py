@@ -25,7 +25,7 @@ try:
     adb('shell','am','start','-n','com.haliosproto.joeyonline/.MainActivity')
     find('Joey Online',90)
     tap(find('Download & prepare game',30));tap(find('Start game',300))
-    find('Right click for the next tap',720);time.sleep(35)
+    find('Tap to click',720);time.sleep(35)
     (out/'android-game.png').write_bytes(adb('exec-out','screencap','-p'))
     (out/'result.txt').write_text('PASS: signed Android app downloaded and cached the game, started the original game, and activated its multiplayer hook in Android 15 WebView. This is a cloud emulator, not a physical phone or complete duel.\n')
 finally:
