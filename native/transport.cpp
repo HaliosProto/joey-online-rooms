@@ -46,6 +46,8 @@ Bytes http(const std::wstring& endpoint, const wchar_t* method, const std::wstri
     return bytes;
 }
 CloudSocket::CloudSocket(const std::wstring& endpoint, const std::wstring& path, const std::wstring& hostToken) : connection(std::make_unique<CloudConnection>(endpoint)) {
+    // HTTP lookups have a short timeout; a turn-based duel must survive pauses between moves.
+    check(WinHttpSetTimeouts(connection->session.value, 4000, 5000, 5000, 45000));
     auto request = connection->request(L"GET", path);
     check(WinHttpSetOption(request->value, WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET, nullptr, 0));
     const std::wstring headers = hostToken.empty() ? L"" : L"Authorization: Bearer " + hostToken + L"\r\n";

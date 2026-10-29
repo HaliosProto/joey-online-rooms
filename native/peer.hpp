@@ -28,7 +28,7 @@ struct PeerState {
     std::mutex mutex;
     std::recursive_mutex callbackMutex;
     std::condition_variable changed;
-    std::atomic<bool> closed{false}, enumerating{false}, connected{false};
+    std::atomic<bool> closed{false}, connected{false};
     HRESULT connectionResult = DPNERR_CONNECTING;
     std::shared_ptr<CloudSocket> socket;
     HRESULT notify(DWORD message, void* value);
@@ -38,6 +38,7 @@ class Peer final : public IDirectPlay8Peer {
     std::atomic<DPNHANDLE> nextHandle{1};
     std::shared_ptr<PeerState> state;
     std::thread receiver, heartbeat, enumerator;
+    std::shared_ptr<std::atomic<bool>> enumCancel;
     HRESULT startRoom(const GUID& room, const std::wstring& token, bool host);
     void stopEnumeration();
 public:

@@ -11,11 +11,12 @@ struct Observation {
     joey::Bytes received;
     DWORD sender = 0;
     bool ended = false;
+    bool blockDiscovery = false, discoveryEntered = false, releaseDiscovery = false;
     ~Observation() { if (address) address->Release(); }
 };
 static HRESULT WINAPI callback(void* context, DWORD id, void* value) {
     auto& observation = *static_cast<Observation*>(context);
-    std::lock_guard<std::mutex> lock(observation.mutex);
+    std::unique_lock<std::mutex> lock(observation.mutex);
     if (id == DPN_MSGID_CREATE_PLAYER) ++observation.players;
     if (id == DPN_MSGID_ENUM_HOSTS_RESPONSE) {
         auto* message = static_cast<DPNMSG_ENUM_HOSTS_RESPONSE*>(value);
@@ -23,6 +24,11 @@ static HRESULT WINAPI callback(void* context, DWORD id, void* value) {
             observation.room = message->pApplicationDescription->guidInstance;
             if (observation.address) observation.address->Release();
             observation.address = message->pAddressSender; observation.address->AddRef();
+            if (observation.blockDiscovery) {
+                observation.discoveryEntered = true; observation.changed.notify_all();
+                observation.changed.wait(lock, [&] { return observation.releaseDiscovery; });
+                observation.blockDiscovery = false;
+            }
         }
     }
     if (id == DPN_MSGID_RECEIVE) { auto* message = static_cast<DPNMSG_RECEIVE*>(value); observation.sender = message->dpnidSender; observation.received.assign(message->pReceiveData, message->pReceiveData + message->dwReceiveDataSize); }
@@ -45,6 +51,14 @@ int wmain(int argc, wchar_t** argv) {
         DPN_APPLICATION_DESC description{}; description.dwSize = sizeof(description); description.dwMaxPlayers = 2;
         CoCreateGuid(&description.guidApplication); description.pwszSessionName = const_cast<wchar_t*>(L"Headless validation");
         okay(host.Host(&description, nullptr, 0, nullptr, nullptr, nullptr, 0), "Cloud hosting failed");
+        guestEvents.blockDiscovery = true;
+        DPNHANDLE discovery = 0;
+        okay(guest.EnumHosts(&description, nullptr, nullptr, nullptr, 0, 1, 0, 0, nullptr, &discovery, 0), "Asynchronous discovery failed");
+        { std::unique_lock<std::mutex> lock(guestEvents.mutex); require(guestEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return guestEvents.discoveryEntered;}), "Discovery callback did not begin"); }
+        const auto cancelStart = std::chrono::steady_clock::now();
+        okay(guest.CancelAsyncOperation(discovery, 0), "Discovery cancellation failed");
+        require(std::chrono::steady_clock::now() - cancelStart < std::chrono::milliseconds(500), "Cancellation blocked on the application's discovery callback");
+        { std::unique_lock<std::mutex> lock(guestEvents.mutex); guestEvents.releaseDiscovery = true; guestEvents.changed.notify_all(); require(guestEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return !guestEvents.blockDiscovery;}), "Discovery callback did not finish"); }
         okay(guest.EnumHosts(&description, nullptr, nullptr, nullptr, 0, 1, 0, 0, nullptr, nullptr, DPNENUMHOSTS_SYNC), "Room discovery failed");
         require(guestEvents.address != nullptr, "Hosted room was not listed");
         okay(guest.Connect(&description, guestEvents.address, nullptr, nullptr, nullptr, nullptr, 0, nullptr, nullptr, nullptr, 0), "Cloud join failed");
@@ -53,6 +67,9 @@ int wmain(int argc, wchar_t** argv) {
             require(hostEvents.changed.wait_for(lock, std::chrono::seconds(5), [&] {return hostEvents.players == 2;}), "Host did not see guest");
         }
         require(guestEvents.players == 2, "Guest did not see both players");
+        std::this_thread::sleep_for(std::chrono::seconds(25));
+        { std::lock_guard<std::mutex> lock(hostEvents.mutex); require(!hostEvents.ended, "Idle host connection dropped between moves"); }
+        { std::lock_guard<std::mutex> lock(guestEvents.mutex); require(!guestEvents.ended, "Idle guest connection dropped between moves"); }
         DWORD size = 0; require(guest.GetPeerInfo(1, nullptr, &size, 0) == DPNERR_BUFFERTOOSMALL, "Player size negotiation failed");
         joey::Bytes playerBytes(size); auto* player = reinterpret_cast<DPN_PLAYER_INFO*>(playerBytes.data()); player->dwSize = sizeof(*player);
         okay(guest.GetPeerInfo(1, player, &size, 0), "Host metadata missing");
@@ -67,7 +84,7 @@ int wmain(int argc, wchar_t** argv) {
         guest.Close(0);
         { std::unique_lock<std::mutex> lock(hostEvents.mutex); require(hostEvents.changed.wait_for(lock, std::chrono::seconds(8), [&] {return hostEvents.ended;}), "Disconnect was not propagated"); }
         host.Close(0); third.Close(0);
-        std::cout << "PASS: native hosting, public discovery, joining, player identities, capacity, bidirectional payloads, and disconnect\n";
+        std::cout << "PASS: native hosting, public discovery, nonblocking cancellation, idle connections, joining, player identities, capacity, bidirectional payloads, and disconnect\n";
         return 0;
     } catch (const std::exception& error) { std::cerr << "FAIL: " << error.what() << "\n"; return 1; }
 }

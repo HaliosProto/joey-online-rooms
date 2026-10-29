@@ -31,9 +31,9 @@ static std::vector<Room> rooms(const std::wstring& endpoint, const GUID& app) {
     }
     reader.end(); return result;
 }
-static void foundRooms(const std::shared_ptr<PeerState>& state, const GUID& app, void* context) {
+static void foundRooms(const std::shared_ptr<PeerState>& state, const GUID& app, void* context, const std::shared_ptr<std::atomic<bool>>& cancelled = {}) {
     for (const auto& room : rooms(state->endpoint, app)) {
-        if (state->closed.load()) return;
+        if (state->closed.load() || (cancelled && cancelled->load())) return;
         auto* sender = new Address(); sender->room = room.id;
         auto* device = new Address();
         auto description = room.descriptor();
@@ -117,7 +117,13 @@ HRESULT Peer::EnumServiceProviders(const GUID* provider, const GUID*, DPN_SERVIC
     std::memset(output, 0, needed); output->guid = provider ? GUID{} : CLSID_DP8SP_TCPIP; output->pwszName = reinterpret_cast<wchar_t*>(output + 1);
     std::memcpy(output->pwszName, name.c_str(), (name.size() + 1) * 2); return S_OK;
 }
-void Peer::stopEnumeration() { state->enumerating.store(false); state->changed.notify_all(); joinThread(enumerator); }
+void Peer::stopEnumeration() {
+    if (enumCancel) enumCancel->store(true);
+    state->changed.notify_all();
+    // Cancel must not wait for an application callback that may need a lock held by its caller.
+    // The worker owns shared state and suppresses results once its own cancellation token is set.
+    if (enumerator.joinable()) enumerator.detach();
+}
 HRESULT Peer::CancelAsyncOperation(DPNHANDLE, DWORD) {
     stopEnumeration(); return S_OK;
 }
@@ -126,12 +132,12 @@ HRESULT Peer::EnumHosts(DPN_APPLICATION_DESC* description, IDirectPlay8Address*,
     stopEnumeration(); const GUID app = description->guidApplication;
     if (flags & DPNENUMHOSTS_SYNC) { try { foundRooms(state, app, context); return S_OK; } catch (const std::exception& error) { failure(error); return DPNERR_NOCONNECTION; } }
     const DPNHANDLE operation = nextHandle++; if (handle) *handle = operation;
-    state->enumerating.store(true); auto shared = state;
-    enumerator = std::thread([shared, app, context, operation] {
-        while (shared->enumerating.load() && !shared->closed.load()) {
-            try { foundRooms(shared, app, context); } catch (const std::exception& error) { failure(error); }
+    enumCancel = std::make_shared<std::atomic<bool>>(false); auto cancelled = enumCancel; auto shared = state;
+    enumerator = std::thread([shared, cancelled, app, context, operation] {
+        while (!cancelled->load() && !shared->closed.load()) {
+            try { foundRooms(shared, app, context, cancelled); } catch (const std::exception& error) { failure(error); }
             std::unique_lock<std::mutex> lock(shared->mutex);
-            shared->changed.wait_for(lock, 3s, [&] { return !shared->enumerating.load() || shared->closed.load(); });
+            shared->changed.wait_for(lock, 3s, [&] { return cancelled->load() || shared->closed.load(); });
         }
         DPNMSG_ASYNC_OP_COMPLETE complete{}; complete.dwSize = sizeof(complete); complete.hAsyncOp = operation; complete.pvUserContext = context; complete.hResultCode = DPNERR_USERCANCEL;
         shared->notify(DPN_MSGID_ASYNC_OP_COMPLETE, &complete);
@@ -250,7 +256,7 @@ HRESULT Peer::GetCaps(DPN_CAPS* caps, DWORD) { if (!caps || caps->dwSize < sizeo
 HRESULT Peer::GetSPCaps(const GUID*, DPN_SP_CAPS* caps, DWORD) { if (!caps || caps->dwSize != sizeof(DPN_SP_CAPS)) return E_INVALIDARG; caps->dwNumThreads = 2; caps->dwBuffersPerThread = 1; caps->dwDefaultEnumCount = 1; caps->dwDefaultEnumRetryInterval = 3000; caps->dwDefaultEnumTimeout = 10000; caps->dwMaxEnumPayloadSize = 8192; return S_OK; }
 HRESULT Peer::GetConnectionInfo(DPNID, DPN_CONNECTION_INFO* info, DWORD) { if (!info || info->dwSize != sizeof(*info)) return E_INVALIDARG; const DWORD size = info->dwSize; std::memset(info, 0, size); info->dwSize = size; return state->connected.load() ? S_OK : DPNERR_NOCONNECTION; }
 HRESULT Peer::Close(DWORD) {
-    state->closed.store(true); state->enumerating.store(false); state->connected.store(false); state->changed.notify_all();
+    state->closed.store(true); stopEnumeration(); state->connected.store(false); state->changed.notify_all();
     std::shared_ptr<CloudSocket> socket; { std::lock_guard<std::mutex> lock(state->mutex); socket = state->socket; }
     if (socket) socket->close();
     joinThread(enumerator); joinThread(receiver); joinThread(heartbeat);
