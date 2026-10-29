@@ -27,7 +27,10 @@ jobs:
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
           sudo chmod 666 /dev/kvm
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'system-images;android-35;google_apis;x86_64'
-          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force -n joey -k 'system-images;android-35;google_apis;x86_64'
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/joey-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force -n joey -k 'system-images;android-35;google_apis;x86_64' -p "$ANDROID_AVD_HOME/joey.avd"
+          printf 'avd.ini.encoding=UTF-8\npath=%s\n' "$ANDROID_AVD_HOME/joey.avd" > "$ANDROID_AVD_HOME/joey.ini"
           "$ANDROID_HOME/emulator/emulator" -avd joey -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 3072 > /tmp/joey-emulator.log 2>&1 &
           JOEY_EMULATOR_PID=$!
           adb start-server
