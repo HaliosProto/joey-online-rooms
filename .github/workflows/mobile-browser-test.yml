@@ -4,14 +4,14 @@ on:
     inputs:
       engine_run:
         type: string
-        default: "40939175466"
+        default: "40950950768"
       browser:
         type: choice
         options: [chromium, webkit]
         default: chromium
       check:
         type: choice
-        options: [game, network]
+        options: [game, network, frontend]
         default: game
 permissions:
   contents: read
@@ -35,10 +35,10 @@ jobs:
           run-id: ${{ inputs.engine_run }}
           github-token: ${{ github.token }}
       - name: Prepare verified game files
-        run: python3 mobile/prepare_probe.py --engine browser-runtime --native mobile-native --output mobile-web
+        run: python3 ${{ inputs.check == 'frontend' && 'mobile/prepare_site.py' || 'mobile/prepare_probe.py' }} --engine browser-runtime --native mobile-native --output mobile-web
       - name: Install cloud browser tooling
         run: |
-          npm install --no-save playwright@1.56.1
+          npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install --with-deps ${{ inputs.browser }}
       - name: Start the isolated cloud room test service
         if: inputs.check == 'network'
@@ -52,7 +52,7 @@ jobs:
           MOBILE_BROWSER: ${{ inputs.browser }}
           MOBILE_CHECK: ${{ inputs.check }}
           TEST_SERVER: ${{ inputs.check == 'network' && 'http://127.0.0.1:8787' || '' }}
-        run: node mobile/probe_browser.mjs
+        run: node ${{ inputs.check == 'frontend' && 'mobile/test_site.mjs' || 'mobile/probe_browser.mjs' }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
