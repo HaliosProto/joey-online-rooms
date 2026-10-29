@@ -1,0 +1,45 @@
+name: Publish verified mobile site artifact
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+  pages: write
+  id-token: write
+concurrency:
+  group: mobile-site
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Require a successful original-game mobile qualification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN: ${{ inputs.build_run }}
+        run: |
+          gh api "repos/HaliosProto/joey-online-rooms/actions/runs/$BUILD_RUN" > /tmp/mobile-run.json
+          python3 -c "import json; r=json.load(open('/tmp/mobile-run.json')); assert r['conclusion']=='success' and r['path']=='.github/workflows/mobile-publish.yml' and r['head_branch']=='main'"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: github-pages
+          path: verified-pages
+          run-id: ${{ inputs.build_run }}
+          github-token: ${{ github.token }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: github-pages
+          path: verified-pages/artifact.tar
+          retention-days: 7
+          compression-level: 0
+      - name: Publish the verified site without rebuilding it
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
