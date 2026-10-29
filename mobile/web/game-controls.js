@@ -34,5 +34,5 @@
    try{await navigator.share({files:[new File([blob],filename,{type:'application/zip'})]});}catch(error){if(error.name!=='AbortError')originalDownload(blob,filename);}
   }else originalDownload(blob,filename);
  };
- const originalPrint=Module.print;Module.print=function(...args){originalPrint?.(...args);const text=args.join(' ');if(text.includes('integrated cloud networking enabled'))parent.postMessage({type:'joey-status',text:'Tap to click / drag cards / Right click for the next tap'},location.origin);};
+ const originalPrint=Module.print;Module.print=function(...args){originalPrint?.(...args);const text=args.join(' ');if(text.includes('integrated cloud networking enabled'))parent.postMessage({type:'joey-status',text:'Tap the game once to activate, then choose a mode. Drag cards; Right click for the next tap.'},location.origin);};
 })();
