@@ -12,6 +12,9 @@ def find(label,timeout=240):
         try: screen=tree()
         except (subprocess.SubprocessError,ET.ParseError):
             time.sleep(3);continue
+        popup=next((n for n in screen.iter('node') if n.get('text')=='Got it' and n.get('package')=='android'),None)
+        if popup is not None:tap(popup);time.sleep(1);continue
+        if any('Webpage not available' in n.get('text','') for n in screen.iter('node')):raise RuntimeError('Android WebView network error: '+ET.tostring(screen,encoding='unicode'))
         for node in screen.iter('node'):
             if label in node.get('text','') or label in node.get('content-desc',''):return node
         print('Waiting for Android screen:',label,flush=True);time.sleep(8)
@@ -27,4 +30,5 @@ try:
     (out/'result.txt').write_text('PASS: signed Android app downloaded and cached the game, started the original game, and activated its multiplayer hook in Android 15 WebView. This is a cloud emulator, not a physical phone or complete duel.\n')
 finally:
     (out/'logcat.txt').write_bytes(adb('logcat','-d','-t','1000'))
+    (out/'webview-log.txt').write_bytes(adb('logcat','-d','-s','chromium:V','WebViewFactory:V','AndroidRuntime:V'))
     (out/'final.png').write_bytes(adb('exec-out','screencap','-p'))

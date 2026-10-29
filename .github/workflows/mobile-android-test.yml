@@ -31,7 +31,7 @@ jobs:
           mkdir -p "$ANDROID_AVD_HOME"
           echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force -n joey -k 'system-images;android-35;google_apis;x86_64' -p "$ANDROID_AVD_HOME/joey.avd"
           printf 'avd.ini.encoding=UTF-8\npath=%s\n' "$ANDROID_AVD_HOME/joey.avd" > "$ANDROID_AVD_HOME/joey.ini"
-          "$ANDROID_HOME/emulator/emulator" -avd joey -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 3072 > /tmp/joey-emulator.log 2>&1 &
+          "$ANDROID_HOME/emulator/emulator" -avd joey -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 3072 -dns-server 8.8.8.8,1.1.1.1 > /tmp/joey-emulator.log 2>&1 &
           JOEY_EMULATOR_PID=$!
           adb start-server
           for i in $(seq 1 120); do
@@ -40,6 +40,10 @@ jobs:
             sleep 2
           done
           if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" != '1' ]; then cat /tmp/joey-emulator.log; adb devices -l; exit 1; fi
+          adb shell settings put global private_dns_mode off
+          adb shell settings put secure immersive_mode_confirmations confirmed
+          adb shell svc wifi enable
+          sleep 15
           adb shell input keyevent 82
           adb shell settings put system accelerometer_rotation 0
           adb shell settings put system user_rotation 1
