@@ -12,6 +12,9 @@
   if(type==='mousemove')window._boxedwineEmscriptenMouseMove(gx,gy);
   else{canvas.focus();window._boxedwineEmscriptenMouseButton(type==='mousedown'?1:0,button===2?1:0,gx,gy);}
  };
+ window.joeyFocusTrace=[];
+ for(const type of ['focus','blur'])window.addEventListener(type,()=>window.joeyFocusTrace.push({type,time:performance.now()}),true);
+ canvas.addEventListener('mouseleave',event=>{window.joeyFocusTrace.push({type:'mouseleave',active:active!==null,time:performance.now()});if(active!==null){event.preventDefault();event.stopImmediatePropagation();}},{capture:true});
  const touch=(type,handler)=>document.addEventListener(type,event=>{if(event.target!==canvas)return;event.preventDefault();event.stopImmediatePropagation();handler(event);},{capture:true,passive:false});
  touch('touchstart',event=>{if(active!==null)return;const point=event.changedTouches[0];active=point.identifier;pressedAt=performance.now();button=window.joeyRightClick?2:0;canvas.focus();window.dispatchEvent(new FocusEvent('focus'));canvas.dispatchEvent(new MouseEvent('mouseenter',{clientX:point.clientX,clientY:point.clientY,view:window}));send('mousemove',point.clientX,point.clientY);send('mousedown',point.clientX,point.clientY);});
  touch('touchmove',event=>{const point=Array.from(event.changedTouches).find(p=>p.identifier===active);if(point)send('mousemove',point.clientX,point.clientY);});
