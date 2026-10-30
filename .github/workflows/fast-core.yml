@@ -1,0 +1,73 @@
+name: Build emulator-free duel engine and original card assets
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: n1xx1/ocgcore-wasm
+          ref: 6e9a76d6b8aa38339145db3834505b9c22ec29ba
+          submodules: recursive
+          path: fast-vendor
+      - name: Install pinned compiler
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.13
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.13
+      - name: Compile the actual duel engine directly to WebAssembly
+        working-directory: fast-vendor
+        run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          bash scripts/build.sh
+          git submodule status --recursive > SOURCE-REVISIONS.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fast-duel-engine
+          path: |
+            fast-vendor/src/
+            fast-vendor/lib/
+            fast-vendor/LICENSE.md
+            fast-vendor/tsconfig.json
+            fast-vendor/SOURCE-REVISIONS.txt
+            fast-vendor/cpp/ygo/COPYING
+            fast-vendor/cpp/ygo/LICENSE
+          retention-days: 14
+  cards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ProjectIgnis/CardScripts
+          ref: 2ddefd0115a122f8cd3f494b6affbcbc27b4f974
+          path: card-scripts
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ProjectIgnis/BabelCDB
+          ref: 2e6f985a5537d9b16ec7396787b5279d94af419d
+          path: card-database
+      - name: Prepare verified original game resources
+        run: |
+          python3 -m pip install pillow==12.0.0
+          python3 - <<'PY'
+          import urllib.request,hashlib,zipfile,pathlib
+          url='https://github.com/HaliosProto/joey-online-rooms/releases/download/full-game-preview-2/Joey-the-Passion-Online-Full-Game.zip'
+          urllib.request.urlretrieve(url,'original.zip')
+          with open('original.zip','rb') as f: assert hashlib.file_digest(f,'sha256').hexdigest()=='f41c3e7203f7f1246c19c14f0abbbf4a23d687d2ed19c6738d7c1081cb747267'
+          with zipfile.ZipFile('original.zip') as z:z.extractall('original')
+          data=next(pathlib.Path('original').glob('*/data.dat'))
+          pathlib.Path('game-path.txt').write_text(str(data.parent))
+          PY
+          python3 fast/export_assets.py --game "$(cat game-path.txt)" --output fast-assets --scripts card-scripts --database card-database/cards.cdb
+          cp card-scripts/COPYING fast-assets/CardScripts-COPYING.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fast-original-cards
+          path: fast-assets/
+          retention-days: 14
