@@ -18,24 +18,24 @@ export class DuelSession{
   if(this.handle)this.core.destroyDuel(this.handle);
   this.lp=[8000,8000];this.turn=0;this.phase=0;this.turnNumber=0;this.prompt=null;this.previousPrompt=null;this.revision=0;this.winner=null;this.log=[];this.errors=[];
   const options={startingLP:8000,startingDrawCount:5,drawCountPerTurn:1};
-  this.handle=this.core.createDuel({flags:Mode.MODE_GOAT,seed:seed||Array.from(crypto.getRandomValues(new Uint32Array(4)),v=>BigInt(v)+1n),team1:options,team2:options,
+  this.stage='create duel';this.handle=this.core.createDuel({flags:Mode.MODE_GOAT,seed:seed||Array.from(crypto.getRandomValues(new Uint32Array(4)),v=>BigInt(v)+1n),team1:options,team2:options,
    cardReader:code=>{const c=this.rules.cards[code];return c?{...c,race:BigInt(c.race)}:null;},
    scriptReader:name=>this.rules.scripts[name]??null,
    errorHandler:(type,text)=>{if(type===0)this.errors.push(String(text));}
   });
   if(!this.handle)throw Error('The duel engine could not start.');
-  for(const name of ['constant.lua','utility.lua'])if(!this.core.loadScript(this.handle,name,this.rules.scripts[name]))throw Error('Unable to load duel rules: '+name);
+  for(const name of ['constant.lua','utility.lua']){this.stage='load '+name;if(!this.core.loadScript(this.handle,name,this.rules.scripts[name]))throw Error('Unable to load duel rules: '+name);}
   for(let player=0;player<2;player++){
    const deck=validateDeck(decks[player],this.catalog);
-   for(const [part,location] of [['main',L.DECK],['extra',L.EXTRA]])for(const code of deck[part])this.core.duelNewCard(this.handle,{team:player,duelist:0,code,controller:player,location,sequence:0,position:P.FACEDOWN_DEFENSE});
+   for(const [part,location] of [['main',L.DECK],['extra',L.EXTRA]])for(const code of deck[part]){this.stage='add card '+code;this.core.duelNewCard(this.handle,{team:player,duelist:0,code,controller:player,location,sequence:0,position:P.FACEDOWN_DEFENSE});}
   }
-  this.core.startDuel(this.handle);return this.advance();
+  this.stage='start duel';this.core.startDuel(this.handle);return this.advance();
  }
  advance(){
   const before=performance.now();let status,iterations=0;this.prompt=null;
   do{
    if(++iterations>10000)throw Error('The duel did not reach a decision.');
-   status=this.core.duelProcess(this.handle);
+   this.stage='process rules';status=this.core.duelProcess(this.handle);this.stage='read decisions';
    for(const m of this.core.duelGetMessage(this.handle)){
     if(PROMPTS.has(m.type)){this.prompt=m;this.previousPrompt=m;}
     if(m.type===M.RETRY){this.prompt=this.previousPrompt;this.notice='That selection is not valid. Please choose again.';}
@@ -52,7 +52,7 @@ export class DuelSession{
   this.log=this.log.slice(-10);this.revision++;this.metrics.processMs.push(performance.now()-before);
   if(this.errors.length)throw Error('The card rules reported an error: '+this.errors.slice(-2).join('; '));
   if(status===Result.WAITING&&!this.prompt)throw Error('The rules engine requested an unsupported decision.');
-  return this.views();
+  this.stage='query field';return this.views();
  }
  respond(player,revision,response){
   if(this.winner!==null||!this.prompt||this.prompt.player!==player||revision!==this.revision)throw Error('Wait for your current choice.');

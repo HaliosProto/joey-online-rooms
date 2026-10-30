@@ -85,7 +85,11 @@ def export(game,output,scripts,db):
     for r in connection.execute('SELECT * FROM datas'):
         setcode=r['setcode']&((1<<64)-1);level=r['level'];kind=r['type']
         cards[str(r['id'])]={'code':r['id'],'alias':r['alias'],'setcodes':[(setcode>>(i*16))&65535 for i in range(4) if (setcode>>(i*16))&65535], 'type':kind,'level':level&255,'attribute':r['attribute'],'race':str(r['race']),'attack':r['atk'],'defense':r['def'],'lscale':(level>>24)&255,'rscale':(level>>16)&255,'link_marker':0}
-    for r in connection.execute('SELECT * FROM texts'):texts[str(r['id'])]={'name':r['name'],'text':r['desc'],'strings':[r[f'str{i}'] for i in range(1,17)]}
+    for r in connection.execute('SELECT * FROM texts'):
+        # The engine needs all card stats for generated cards, but the interface
+        # only needs effect text for this card pool and tokens.
+        if r['id'] in by_code or cards.get(str(r['id']),{}).get('type',0)&0x4000:
+            texts[str(r['id'])]={'name':r['name'],'text':r['desc'],'strings':[r[f'str{i}'] for i in range(1,17)]}
     for card in catalog:
         text=texts.get(str(card['id']),{})
         card['originalText']=card['text'];card['text']=text.get('text',card['text']);card['strings']=text.get('strings',[])

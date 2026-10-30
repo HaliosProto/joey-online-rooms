@@ -9,5 +9,5 @@ self.onmessage=async({data})=>{
   else if(data.kind==='start')postMessage({kind:'views',views:session.start(data.decks),metrics:session.metrics});
   else if(data.kind==='respond')postMessage({kind:'views',views:session.respond(data.player,data.revision,data.response),metrics:session.metrics});
   else if(data.kind==='surrender')postMessage({kind:'views',views:session.surrender(data.player),metrics:session.metrics});
- }catch(error){postMessage({kind:'error',message:String(error.message||error),stack:error.stack});}
+ }catch(error){postMessage({kind:'error',message:String(error.message||error),stack:(session?.stage||'initialization')+': '+(error.stack||String(error))});}
 };

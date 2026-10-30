@@ -29,6 +29,14 @@ jobs:
         working-directory: fast-vendor
         run: |
           source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/build.sh');a,b=p.read_text().rsplit('\nem++',1)
+          old='-fwasm-exceptions -sSUPPORT_LONGJMP=wasm'
+          assert b.count(old)==1
+          b=b.replace(old,'-sDISABLE_EXCEPTION_CATCHING=0 -sSUPPORT_LONGJMP=emscripten')
+          p.write_text(a+'\nem++'+b)
+          PY
           bash scripts/build.sh
           git submodule status --recursive > SOURCE-REVISIONS.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
