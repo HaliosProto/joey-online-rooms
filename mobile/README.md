@@ -1,6 +1,10 @@
-# Mobile compatibility builds
+# Complete original game website and compatibility builds
 
 The Android APK loads the same HTTPS game site used by the iPhone Home Screen app. BoxedWine executes the supplied original game locally through single-thread WebAssembly; Cloudflare only lists rooms and relays multiplayer data. No PC host, paid relay, Apple developer membership or App Store listing is required.
+
+## Refresh the website without rebuilding the original game
+
+Run `original-website.yml` with a Pages artifact containing the verified original archive parts. It replaces only the launcher/controls/service worker, exercises original Single Duel in desktop Chromium, touch Chromium and touch WebKit, and publishes only after all three checks pass when `publish=true`. The main site uses a single Play game button; files load automatically and cache as they stream. `original-deploy-tested.yml` republishes a qualified site and corrects earlier shared rewrite links.
 
 ## Rebuild in the cloud
 

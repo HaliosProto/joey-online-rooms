@@ -1,3 +1,5 @@
+**Separate experiment; this is not the original Joey the Passion game.** The requested full game, including Joey AI and progression, is at https://haliosproto.github.io/joey-online-rooms/. Earlier website links now point there.
+
 Joey Fast runs a dedicated duel engine directly on your device, with a new touch interface. It removes the Windows emulator used by the earlier mobile preview.
 
 - **iPhone / iPad:** Open https://haliosproto.github.io/joey-online-rooms/fast/ in Safari, then Share -> Add to Home Screen.

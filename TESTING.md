@@ -1,6 +1,16 @@
 # Verification status
 
-## Emulator-free Joey Fast
+## Original game website (selected experience)
+
+The user's requirement is the complete original game, including Joey AI, original graphics/voices/rules, progression and multiplayer. The separate engine rewrite is not an accepted substitute. The primary website runs the original executable again, with one Play game button and automatic browser loading/cache rather than a manual installer or separate prepare/start stage.
+
+Cloud run https://github.com/HaliosProto/joey-online-rooms/actions/runs/41043890163 passed one-click startup, original main menu, Duel Mode and Single Duel with desktop Chromium mouse input, Chromium touch input and WebKit touch input. Screenshots show the original Joey introduction/dialogue and rock-paper-scissors screen. This does not establish a completed AI duel, audio quality or physical-phone speed.
+
+The website refresh copies the qualified game/runtime archive parts without rebuilding or changing them. Original `Voice.dat`, game resources and executable remain present. The service worker streams archive pieces into the existing runtime and caches each piece where storage allows. Browser save storage still uses `joey-online-v1`. No original saves are deleted.
+
+This removes manual download/install steps, not network transfer: browsers still load approximately 573 MB of original resources on first use. Original browser emulation remains demanding and mobile speed is unresolved. The unrelated rewritten-client benchmarks below are not measurements of this original game.
+
+## Separate experimental client (not the original game)
 
 The rewritten client passed complete two-client duels through its actual touch interface in Chromium (https://github.com/HaliosProto/joey-online-rooms/actions/runs/41041280049) and WebKit (https://github.com/HaliosProto/joey-online-rooms/actions/runs/41041286826), from the same source commit `ca6ad1a`. Each check drives 400 actual engine decisions through the room relay to a matching winner on both clients. The qualification deck uses original normal monsters to isolate summoning, field placement, battle, turn changes, hand-limit decisions and winning. It does not establish every spell/trap interaction.
 
