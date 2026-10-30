@@ -1,0 +1,96 @@
+name: Publish original Joey game website
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        type: string
+        default: '41041635330'
+      publish:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: original-game-website
+  cancel-in-progress: false
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: github-pages
+          path: previous-site
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ github.token }}
+      - name: Keep the complete original game and replace only the website launcher
+        run: |
+          mkdir mobile-web
+          tar -xf previous-site/artifact.tar -C mobile-web
+          python3 mobile/refresh_website.py --site mobile-web
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: original-game-website
+          path: mobile-web/
+          retention-days: 1
+  qualify:
+    needs: assemble
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            device: desktop
+          - browser: chromium
+            device: touch
+          - browser: webkit
+            device: touch
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: original-game-website
+          path: mobile-web
+      - name: Install cloud browser tools
+        run: |
+          npm install --no-save playwright@1.56.1 pngjs@7.0.0
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Open the original Single Duel with Joey using one Play button
+        env:
+          MOBILE_SOLO: 'true'
+          MOBILE_BROWSER: ${{ matrix.browser }}
+          ORIGINAL_DESKTOP: ${{ matrix.device == 'desktop' && 'true' || 'false' }}
+        run: node mobile/test_site.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: original-game-${{ matrix.browser }}-${{ matrix.device }}
+          path: mobile-test-results/
+          retention-days: 7
+  deploy:
+    if: inputs.publish
+    needs: [assemble, qualify]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: original-game-website
+          path: site
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: site
+          retention-days: 1
+      - name: Publish the complete original browser game
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e

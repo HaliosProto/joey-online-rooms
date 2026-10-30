@@ -1,28 +1,15 @@
 const $=id=>document.getElementById(id);
 const message=$('message'),button=$('prepare'),progress=$('download'),frame=$('game');
 let started=false,right=false;
-const CACHE='joey-mobile-assets-v2';
 async function prepare(){
  button.disabled=true;progress.hidden=false;
  try{
   if(!('serviceWorker' in navigator)||!('caches' in window))throw new Error('Use a current Safari or Chrome browser to play.');
   await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
   if(!navigator.serviceWorker.controller)await new Promise((resolve,reject)=>{navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true});setTimeout(()=>reject(new Error('Please reload this page once, then try again.')),10000);});
-  const manifest=await fetch('assets.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Game files are not available yet.');return r.json();});
-  const total=manifest.reduce((sum,x)=>sum+x.bytes,0);let done=0;
-  const estimate=await navigator.storage?.estimate?.();
-  if(estimate?.quota && estimate.quota-estimate.usage<total*1.2)message.textContent='Storage is low. Free about 1 GB if the download fails.';
-  await navigator.storage?.persist?.().catch(()=>false);const cache=await caches.open(CACHE);
-  for(const asset of manifest){
-   const url=new URL(asset.path,location.href);url.searchParams.set('sha256',asset.sha256);const existing=await cache.match(url);
-   if(existing){done+=asset.bytes;progress.value=done/total;continue;}
-   message.textContent='Downloading game: '+Math.round(done/total*100)+'%';
-   const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('Download failed. Try again; completed files are kept.');
-   let received=0;const meter=new TransformStream({transform(chunk,controller){received+=chunk.byteLength;progress.value=(done+received)/total;message.textContent='Downloading game: '+Math.min(100,Math.round((done+received)/total*100))+'%';controller.enqueue(chunk);}});
-   await cache.put(url,new Response(response.body.pipeThrough(meter),{status:200,headers:response.headers}));done+=asset.bytes;
-  }
-  await caches.delete('joey-mobile-preview-1');
-  button.textContent='Start game';button.disabled=false;button.onclick=startGame;progress.hidden=true;message.textContent='Ready. Startup can take several minutes. Your saves stay on this device.';
+  navigator.storage?.persist?.().catch(()=>false);
+  // Launch directly. Archive pieces cache as they load, with no install stage.
+  progress.hidden=true;startGame();
  }catch(error){message.textContent=error.message;button.textContent='Try again';button.disabled=false;}
 }
 function startGame(){
@@ -40,6 +27,13 @@ $('backup').onclick=()=>{try{frame.contentWindow.saveOverlay();}catch{alert('Sta
 window.joeyBack=()=>{if(!started)return false;key('Escape','Escape',27);return true;};
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==frame.contentWindow)return;
  if(event.data?.type==='joey-status')$('running-status').textContent=String(event.data.text).slice(0,200);
+ if(event.data?.type==='joey-status')$('loading-game').hidden=true;
+ if(event.data?.type==='joey-archive-progress'){
+  const {archive,loaded,total}=event.data;if(!['game.zip','runtime.zip'].includes(archive)||!Number.isFinite(loaded)||!Number.isFinite(total)||total<=0)return;
+  loading[archive]={loaded,total};const values=Object.values(loading),done=values.reduce((n,x)=>n+x.loaded,0),size=values.reduce((n,x)=>n+x.total,0);$('loading-game').hidden=false;$('loading-game').value=done/size;
+  $('running-status').textContent=done<size?'Loading original game files: '+Math.round(done/1048576)+' / '+Math.round(size/1048576)+' MB. Keep this tab open.':'Starting the original game. This can take several minutes.';
+ }
  if(event.data?.type==='joey-right-used'){right=false;$('right').setAttribute('aria-pressed','false');}
 });
+const loading={};
 button.onclick=prepare;
