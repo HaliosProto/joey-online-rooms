@@ -59,6 +59,16 @@ try{
   }
   await point(page,box.x+box.width*.27,box.y+box.height*.77);await new Promise(r=>setTimeout(r,10000));await page.screenshot({path:'mobile-test-results/joey-single-response.png'});
   if(logs.some(l=>/Unhandled page fault|Unhandled exception|starting debugger/.test(l)))throw new Error('The original game crashed while entering Single Duel');
+  if(process.env.PROFILE_GAME==='true'){
+   const session=await context.newCDPSession(page);await session.send('Profiler.enable');await session.send('Profiler.setSamplingInterval',{interval:1000});await session.send('Profiler.start');
+   await page.locator('#performance').click();await page.locator('#performance-results').waitFor({state:'visible',timeout:30000});
+   const {profile}=await session.send('Profiler.stop');writeFileSync('mobile-test-results/steady-game.cpuprofile',JSON.stringify(profile));await session.detach();
+   const downloading=page.waitForEvent('download');await page.locator('#download-performance').click();const download=await downloading;await download.saveAs('mobile-test-results/joey-performance.json');
+   const report=JSON.parse(await (await import('node:fs/promises')).readFile('mobile-test-results/joey-performance.json','utf8'));
+   if(report.seconds<9||report.browserAnimation.count<5||report.renderCalls<1||!report.runtimeLog.some(entry=>entry.text.includes('[MIPS]')))throw new Error('Performance report did not observe the running game: '+JSON.stringify(report));
+   await page.locator('#performance-results button').filter({hasText:'Close'}).click();
+   if(!await frame.evaluate(()=>typeof window.joeyMeasurePerformance==='function'))throw new Error('Performance reporting disrupted the game');
+  }
   writeFileSync('mobile-test-results/site-result.txt','PASS: one-click browser launch of the unmodified original game, actual Duel Mode and Single Duel screens. Screenshots record the original Joey opponent; complete AI duel/physical-phone performance remain unverified.\n');
  }else{
  await point(page,box.x+box.width*.5,box.y+box.height*.90);await new Promise(r=>setTimeout(r,4000));await page.screenshot({path:'mobile-test-results/two-player-data.png'});await point(page,box.x+box.width*.36,box.y+box.height*.82);await new Promise(r=>setTimeout(r,7000));await page.screenshot({path:'mobile-test-results/network-setup.png'});await point(page,box.x+box.width*.18,box.y+box.height*.57);await new Promise(r=>setTimeout(r,6000));await page.screenshot({path:'mobile-test-results/network-after-name.png'});await point(page,box.x+box.width*.53,box.y+box.height*.28);await new Promise(r=>setTimeout(r,4000));await page.screenshot({path:'mobile-test-results/host-selected.png'});await point(page,box.x+box.width*.18,box.y+box.height*.57);await new Promise(r=>setTimeout(r,7000));await page.screenshot({path:'mobile-test-results/host-lobby.png'});writeFileSync('mobile-test-results/room-requests.json',JSON.stringify({requests:roomPosts,responses:roomResponses}));if(!roomResponses.some(r=>r.status===201))throw new Error('Original game could not create a room: '+JSON.stringify(roomResponses));

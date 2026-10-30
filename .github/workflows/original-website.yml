@@ -4,7 +4,7 @@ on:
     inputs:
       source_run:
         type: string
-        default: '41047360859'
+        default: '41054833628'
       publish:
         type: boolean
         default: false
@@ -72,6 +72,7 @@ jobs:
           ORIGINAL_DESKTOP: ${{ matrix.device == 'desktop' && 'true' || 'false' }}
           BLOCK_BROWSER_STORAGE: ${{ matrix.device == 'restricted' && 'true' || 'false' }}
           CHECK_GAME_AUDIO: ${{ matrix.device != 'restricted' && 'true' || 'false' }}
+          PROFILE_GAME: ${{ matrix.device == 'desktop' && 'true' || 'false' }}
         run: node mobile/test_site.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

@@ -38,6 +38,22 @@ $('name').onclick=()=>{$('text-entry').showModal();$('typed').focus();};
 $('send-text').onclick=()=>{frame.contentWindow.joeyTypeText?.($('typed').value);$('typed').value='';};
 $('full').onclick=()=>document.fullscreenElement?document.exitFullscreen?.():$('play').requestFullscreen?.();
 $('backup').onclick=()=>{try{frame.contentWindow.saveOverlay();}catch{alert('Start the game before exporting a save backup.');}};
+let performanceReport;
+$('performance').onclick=async()=>{
+ const check=$('performance');check.disabled=true;
+ try{
+  if(typeof frame.contentWindow.joeyMeasurePerformance!=='function')throw Error('Wait until the game opens before checking its speed.');
+  $('running-status').textContent='Checking performance for 10 seconds. Keep this tab visible and continue playing.';
+  performanceReport=await frame.contentWindow.joeyMeasurePerformance();
+  $('performance-summary').textContent='Check complete. Download this report and share it in our chat so we can investigate the slowdown. It contains browser and timing information, without your saved game or player details. Nothing is sent automatically.';
+  $('performance-results').showModal();$('running-status').textContent='Performance check complete.';
+ }catch(error){$('running-status').textContent=error.message;}finally{check.disabled=false;}
+};
+$('download-performance').onclick=()=>{
+ if(!performanceReport)return;
+ const url=URL.createObjectURL(new Blob([JSON.stringify(performanceReport,null,2)],{type:'application/json'}));
+ const link=document.createElement('a');link.href=url;link.download='joey-performance.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
 window.joeyBack=()=>{if(!started)return false;key('Escape','Escape',27);return true;};
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==frame.contentWindow)return;
  if(event.data?.type==='joey-status')$('running-status').textContent=String(event.data.text).slice(0,200)+saveWarning;

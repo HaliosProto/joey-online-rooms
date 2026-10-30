@@ -32,5 +32,36 @@
    try{await navigator.share({files:[new File([blob],filename,{type:'application/zip'})]});}catch(error){if(error.name!=='AbortError')originalDownload(blob,filename);}
   }else originalDownload(blob,filename);
  };
- const originalPrint=Module.print;Module.print=function(...args){originalPrint?.(...args);const text=args.join(' ');if(text.includes('integrated cloud networking enabled'))parent.postMessage({type:'joey-status',text:'Tap to click; drag cards. Tap a demonstration to return to the menu.'},location.origin);};
+ const performanceLog=[];
+ const originalPrint=Module.print;Module.print=function(...args){originalPrint?.(...args);const text=args.join(' ');if(/\[MIPS\]|WASM JIT.*(?:first|simd|unavailable|batching)|ran main loop/.test(text)){performanceLog.push({at:Math.round(performance.now()),text});if(performanceLog.length>16)performanceLog.shift();}if(text.includes('integrated cloud networking enabled'))parent.postMessage({type:'joey-status',text:'Tap to click; drag cards. Tap a demonstration to return to the menu.'},location.origin);};
+ let measuring=false;
+ window.joeyMeasurePerformance=async()=>{
+  if(measuring)throw Error('A performance check is already running.');measuring=true;
+  const start=performance.now(),frames=[],delays=[],longTasks=[],restore=[];let lastFrame=start,lastTimer=start,active=true,drawCalls=0,renderIntervals=0,drew=false,observer;
+  const onFrame=time=>{if(!active)return;frames.push(time-lastFrame);lastFrame=time;if(drew)renderIntervals++;drew=false;requestAnimationFrame(onFrame);};
+  const onTimer=()=>{if(!active)return;const now=performance.now();delays.push(Math.max(0,now-lastTimer-50));lastTimer=now;setTimeout(onTimer,50);};
+  try{
+   for(const Constructor of [globalThis.WebGLRenderingContext,globalThis.WebGL2RenderingContext]){
+    const proto=Constructor?.prototype;if(!proto)continue;
+    for(const name of ['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced']){
+     const original=proto[name];if(typeof original!=='function')continue;
+     const wrapped=function(...args){drawCalls++;drew=true;return original.apply(this,args);};
+     try{proto[name]=wrapped;restore.push(()=>{if(proto[name]===wrapped)proto[name]=original;});}catch{}
+    }
+   }
+   try{observer=new PerformanceObserver(list=>{for(const e of list.getEntries())longTasks.push({at:Math.round(e.startTime-start),ms:Math.round(e.duration)});});observer.observe({type:'longtask'});}catch{}
+   requestAnimationFrame(onFrame);setTimeout(onTimer,50);
+   await new Promise(resolve=>setTimeout(resolve,10000));
+   const seconds=(performance.now()-start)/1000;
+   const summary=values=>{const a=values.slice().sort((a,b)=>a-b);return {count:a.length,medianMs:a.length?Math.round(a[Math.floor(a.length*.5)]*10)/10:null,p95Ms:a.length?Math.round(a[Math.min(a.length-1,Math.floor(a.length*.95))]*10)/10:null,maxMs:a.length?Math.round(a.at(-1)*10)/10:null};};
+   let graphics={};
+   const display=document.getElementById('boxedwine-webgl-canvas-0'),style=display&&getComputedStyle(display);
+   const surface=display&&display.width&&style.display!=='none'&&style.visibility!=='hidden'?display:canvas;
+   for(const kind of ['webgl2','webgl']){
+    let gl;try{gl=surface.getContext(kind);}catch{}if(!gl)continue;
+    const ext=gl.getExtension('WEBGL_debug_renderer_info');graphics={context:kind,renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),vendor:ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR),lost:gl.isContextLost()};break;
+   }
+   return {format:'joey-performance-v1',created:new Date().toISOString(),seconds:Math.round(seconds*10)/10,browser:navigator.userAgent,logicalProcessors:navigator.hardwareConcurrency,memoryLimitGiB:navigator.deviceMemory??null,visibility:document.visibilityState,storage:new URLSearchParams(location.search).get('storage'),runtimeHeapMiB:Module.HEAPU8?Math.round(Module.HEAPU8.buffer.byteLength/1048576):null,graphics,canvas:{width:surface.width,height:surface.height},browserAnimation:summary(frames),timerDelay:summary(delays),longTasks,renderCalls:drawCalls,renderIntervals,renderIntervalsPerSecond:Math.round(renderIntervals/seconds*10)/10,note:'Browser animation and render intervals are diagnostics, not a measurement of game simulation FPS. No saves, player names or room credentials are included.',runtimeLog:performanceLog.slice()};
+  }finally{active=false;observer?.disconnect();for(const undo of restore)undo();measuring=false;}
+ };
 })();
