@@ -27,3 +27,8 @@ mobile/android/local.properties
 *.keystore
 
 __pycache__/
+fast/node_modules/
+fast-build/
+fast-vendor/
+fast-assets/
+fast-results/

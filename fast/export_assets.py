@@ -20,9 +20,9 @@ class Archive:
             off,unpacked,packed=struct.unpack('<III',self.stream.read(12))
             if off+packed>size or unpacked>32*1024*1024:raise ValueError('Invalid resource range')
             if PurePosixPath(name).is_absolute() or '..' in PurePosixPath(name).parts:raise ValueError('Unsafe path')
-            self.entries[name]=(off,unpacked,packed)
+            self.entries[name.casefold()]=(off,unpacked,packed)
     def read(self,name):
-        off,size,packed=self.entries[name];self.stream.seek(off);raw=self.stream.read(packed)
+        off,size,packed=self.entries[name.casefold()];self.stream.seek(off);raw=self.stream.read(packed)
         if packed!=size:
             out=bytearray();dictionary=bytearray(4096);pos=0xfee;i=0;flags=0
             while len(out)<size:
@@ -54,12 +54,14 @@ def export(game,output,scripts,db):
         name=names[i*64:(i+1)*64].split(b'\0')[0].decode('utf-8');start=struct.unpack_from('<I',indices,i*4)[0];text=desc[start:].split(b'\0')[0].decode('utf-8')
         if not name or not code or not pack&4:continue
         path='card/'+image.replace('\\','/').split('/')[-1]
-        if path not in arc.entries:raise ValueError('Missing card art: '+path)
+        if path.casefold() not in arc.entries:raise ValueError('Missing card art: '+path)
         bitmap=Image.open(io.BytesIO(arc.read(path)));bitmap.convert('RGB').save(images/f'{code}.webp','WEBP',quality=86,method=4)
         kind=(prop>>20)&31;sub=(prop>>18)&3
         card={'id':code,'originalId':original,'name':name,'text':text,'image':f'cards/{code}.webp','level':(prop>>25)&15,'attack':((prop>>9)&511)*10,'defense':(prop&511)*10,'kind':('spell' if kind==22 else 'trap' if kind==21 else 'fusion' if sub==2 else 'ritual' if sub==3 else 'monster')}
         by_original[original]=card;catalog.append(card)
     bitmap=Image.open(io.BytesIO(arc.read('card/card_ura.bmp')));bitmap.convert('RGB').save(images/'back.webp','WEBP',quality=86)
+    for size in [192,512]:
+        icon=Image.new('RGB',(size,size),(16,29,36));art=bitmap.convert('RGB');art.thumbnail((int(size*.7),int(size*.9)));icon.paste(art,((size-art.width)//2,(size-art.height)//2));icon.save(output/f'icon-{size}.png')
     deck=(game/'deck.ydc').read_bytes();count=struct.unpack_from('<H',deck,8)[0]
     if count<40 or count>60 or len(deck)<10+count*2:raise ValueError('Invalid supplied deck')
     main=[by_original[struct.unpack_from('<H',deck,10+i*2)[0]]['id'] for i in range(count)]
@@ -74,6 +76,9 @@ def export(game,output,scripts,db):
         setcode=r['setcode']&((1<<64)-1);level=r['level'];kind=r['type']
         cards[str(r['id'])]={'code':r['id'],'alias':r['alias'],'setcodes':[(setcode>>(i*16))&65535 for i in range(4) if (setcode>>(i*16))&65535], 'type':kind,'level':level&255,'attribute':r['attribute'],'race':str(r['race']),'attack':r['atk'],'defense':r['def'],'lscale':(level>>24)&255,'rscale':(level>>16)&255,'link_marker':0}
     for r in connection.execute('SELECT * FROM texts'):texts[str(r['id'])]={'name':r['name'],'text':r['desc'],'strings':[r[f'str{i}'] for i in range(1,17)]}
+    for card in catalog:
+        text=texts.get(str(card['id']),{})
+        card['originalText']=card['text'];card['text']=text.get('text',card['text']);card['strings']=text.get('strings',[])
     missing=[c['name'] for c in catalog if str(c['id']) not in cards]
     if missing:raise ValueError('Engine lacks original cards: '+str(missing))
     files={p.name:p.read_text(encoding='utf-8-sig') for p in scripts.glob('*.lua')}
