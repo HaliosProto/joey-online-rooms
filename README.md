@@ -4,6 +4,16 @@ A native multiplayer companion for Yu-Gi-Oh! Power of Chaos: Joey the Passion, w
 
 ## Download and play
 
+**Joey Fast: rewritten mobile and computer multiplayer client:**
+
+https://haliosproto.github.io/joey-online-rooms/fast/
+
+This version removes the Windows emulator. It uses a dedicated duel engine compiled directly to WebAssembly, touch controls, the original card artwork, deck building and free cloud rooms. On iPhone, open it in Safari and choose **Share -> Add to Home Screen**. Android and computer players open the same link; both friends use Joey Fast. The existing Android launcher opens the updated main site.
+
+All 771 original card entries are represented, with alternate artwork grouped under 768 actual card IDs. The client uses a classic five-zone field and contemporary effect scripts, with some ruling differences from the original executable. Original campaign/AI, voice sequences and saved collections are separate. Practice controls both players on one device. See [fast/README.md](fast/README.md) and TESTING.md for scope and verification.
+
+The original compatibility versions below remain available separately.
+
 **Windows: full game + configured multiplayer:**
 https://github.com/HaliosProto/joey-online-rooms/releases/tag/full-game-preview-2
 
@@ -16,9 +26,9 @@ Download **Joey-Online-Mac.zip**, extract it, move **Joey Online.app** to Applic
 
 Mac and Windows players use the same online room service. Saves and the Mac runtime stay in `~/Library/Application Support/Joey Online/`. The existing Windows download stays available unchanged.
 
-**Mobile preview (Android and iPhone / iPad):**
+**Original mobile compatibility preview (slower):**
 
-https://haliosproto.github.io/joey-online-rooms/
+https://haliosproto.github.io/joey-online-rooms/legacy.html
 
 On iPhone or iPad, open the link in Safari, tap **Share → Add to Home Screen**, then launch the new icon. No App Store account, signing renewal or paid service is required. Android can use the same Home Screen app or the signed APK in the mobile release. The first game download is approximately 573 MB; use Wi-Fi. The original game runs locally through BoxedWine, with touch controls and the same online room service as desktop players. It is not streamed from a PC.
 

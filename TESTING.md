@@ -1,5 +1,23 @@
 # Verification status
 
+## Emulator-free Joey Fast
+
+The rewritten client passed complete two-client duels through its actual touch interface in Chromium (https://github.com/HaliosProto/joey-online-rooms/actions/runs/41041280049) and WebKit (https://github.com/HaliosProto/joey-online-rooms/actions/runs/41041286826), from the same source commit `ca6ad1a`. Each check drives 400 actual engine decisions through the room relay to a matching winner on both clients. The qualification deck uses original normal monsters to isolate summoning, field placement, battle, turn changes, hand-limit decisions and winning. It does not establish every spell/trap interaction.
+
+Both browser engines also load the supplied starter deck and initialize all 768 logical cards representing the original 771 artwork/card entries. Alternate-art and special/prize-card IDs are normalized to the actual script-owning card. Original token artwork is included. This is script-initialization coverage, not exhaustive resolution coverage of every effect.
+
+Cloud measurements: warm engine initialization was 14.3 ms in Chromium and 19 ms in WebKit. The 95th percentile engine processing step across the qualification match was 0.4 ms and 1 ms respectively. The separate initial card-library check recorded a 41 ms cold core initialization in WebKit. These are cloud-runner measurements, not measurements on physical phones; the raw per-step samples are retained in the run artifacts. Frame-pacing samples in those artifacts were recorded on the final static screen and are not a gameplay FPS benchmark.
+
+The client executes OCGCore directly as WebAssembly, with a Web Worker separating rule processing from the DOM interface. It does not run Wine, BoxedWine, a Windows filesystem or an x86 emulator. Art loads as needed. The card rules/metadata bundle is approximately 3.8 MB before HTTP compression, alongside the small engine and requested card images, instead of requiring the earlier 573 MB compatibility download.
+
+The source-built synchronous core uses JavaScript-based exception and longjmp handling. Native WebAssembly exception handling passed Chromium but raised an uncaught exception in WebKit when starting a duel; the portable build passed both engines. The pinned wrapper's query parser does not handle QUERY_TYPE, so the client queries supported fields and obtains card type from its catalog.
+
+The tested site was published without rebuilding in https://github.com/HaliosProto/joey-online-rooms/actions/runs/41041635330. The original compatibility site remains at `legacy.html`, with a separate Home Screen manifest. Windows/Mac release downloads and original saves are preserved. The corresponding source archive contains the exact client source, engine, Lua, card scripts and metadata sources.
+
+The actual published HTTPS site also completed a two-client duel against the production Cloudflare relay in https://github.com/HaliosProto/joey-online-rooms/actions/runs/41041910520. This checks the public Origin/CORS path, browser WebSocket authentication and exact deployed assets.
+
+Remaining qualification includes physical-device performance/thermal testing, offline behavior, full deck-import/export behavior on each mobile container, and the full set of card effects. Original campaign/AI, voices and original save collections have not been ported; practice controls both sides. Friends all use Joey Fast. Classic field rules plus current effect scripts can differ from the original executable's rulings.
+
 Cloud verification passed for source commit `99496c05536da5d47735f3455c30ff47d73a0d8c`:
 
 https://github.com/HaliosProto/joey-online-rooms/actions/runs/40868356668
