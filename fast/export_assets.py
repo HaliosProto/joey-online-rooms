@@ -58,7 +58,7 @@ def export(game,output,scripts,db):
         if not name or not pack&7:continue
         # Special/prize cards have FFFFFFFF instead of an enterable password.
         # Alternate-art entries can also carry synthetic passwords.
-        lookup={'b. skull dragon':'black skull dragon'}.get(name.casefold(),name.casefold())
+        lookup={'b. skull dragon':'black skull dragon','dark magic ritual':'black magic ritual'}.get(name.casefold(),name.casefold())
         if lookup in canonical:code=canonical[lookup]
         if code not in valid_codes:
             code=canonical.get(lookup,0)

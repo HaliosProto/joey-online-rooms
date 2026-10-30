@@ -60,6 +60,12 @@ jobs:
         run: |
           tar -xf legacy-artifact/artifact.tar -C site
           mv site/index.html site/legacy.html
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('site/legacy.html');p.write_text(p.read_text().replace('href="manifest.webmanifest"','href="legacy-manifest.webmanifest"'))
+          m=json.load(open('site/manifest.webmanifest'));m.update({'name':'Joey Original Compatibility','short_name':'Joey Original','start_url':'legacy.html','id':'legacy.html'})
+          pathlib.Path('site/legacy-manifest.webmanifest').write_text(json.dumps(m))
+          PY
           cat > site/index.html <<'HTML'
           <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=fast/"><title>Joey Fast</title></head><body><p><a href="fast/">Open the faster mobile version</a></p><p><a href="legacy.html">Original compatibility version</a></p></body></html>
           HTML
