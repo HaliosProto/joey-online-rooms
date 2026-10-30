@@ -28,6 +28,7 @@ jobs:
           github-token: ${{ github.token }}
       - name: Keep the complete original game and replace only the website launcher
         run: |
+          node --test mobile/archive-loader.test.mjs
           mkdir mobile-web
           tar -xf previous-site/artifact.tar -C mobile-web
           python3 mobile/refresh_website.py --site mobile-web
@@ -50,6 +51,10 @@ jobs:
             device: touch
           - browser: webkit
             device: touch
+          - browser: chromium
+            device: restricted
+          - browser: webkit
+            device: restricted
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
@@ -65,6 +70,7 @@ jobs:
           MOBILE_SOLO: 'true'
           MOBILE_BROWSER: ${{ matrix.browser }}
           ORIGINAL_DESKTOP: ${{ matrix.device == 'desktop' && 'true' || 'false' }}
+          BLOCK_BROWSER_STORAGE: ${{ matrix.device == 'restricted' && 'true' || 'false' }}
         run: node mobile/test_site.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

@@ -9,6 +9,17 @@ virtual=json.loads(match[1]);assert set(virtual)=={'game.zip','runtime.zip'}
 for data in virtual.values():
     assert all((site/part).is_file() for part in data['parts'])
 for f in Path(__file__).with_name('web').iterdir():shutil.copyfile(f,site/f.name)
+# The runtime uses fetch() for ZIP loading. Intercept only the fixed packaged
+# archives inside its own page, so browsers denying service workers still work.
+hashes={}
+for data in virtual.values():
+    for part in data['parts']:
+        with (site/part).open('rb') as stream:hashes[part]=hashlib.file_digest(stream,'sha256').hexdigest()
+bridge=site/'game-archives.js';code=bridge.read_text(encoding='utf-8').replace('const ARCHIVES={};','const ARCHIVES='+json.dumps(virtual)+';').replace('const HASHES={};','const HASHES='+json.dumps(hashes)+';')
+bridge_name='game-archives-'+hashlib.sha256(code.encode()).hexdigest()[:12]+'.js';(site/bridge_name).write_text(code,encoding='utf-8');bridge.unlink()
+html=site/'boxedwine.html';content=html.read_text(encoding='utf-8');content=re.sub(r'<script src=["\']?game-archives-[^>]+></script>','',content)
+if content.count('<script src=room-transport.js>')!=1:raise ValueError('Unexpected original runtime HTML')
+content=content.replace('<script src=room-transport.js>',f'<script src="{bridge_name}"></script><script src=room-transport.js>');html.write_text(content,encoding='utf-8')
 for name in ('mobile.js','mobile.css'):
     source=site/name;target=f'mobile-{hashlib.sha256(source.read_bytes()).hexdigest()[:12]}{source.suffix}';source.rename(site/target)
     for page in ['index.html','licenses.html']:
@@ -16,7 +27,7 @@ for name in ('mobile.js','mobile.css'):
 shutil.copyfile(site/'index.html',site/'legacy.html')
 alternate=site/'fast/index.html'
 if alternate.is_file():
-    shutil.copyfile(alternate,site/'fast/experimental-client.html')
+    if not (site/'fast/experimental-client.html').exists():shutil.copyfile(alternate,site/'fast/experimental-client.html')
     alternate.write_text('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=../"><title>Original Joey the Passion</title></head><body><a href="../">Play the original Joey the Passion game</a></body></html>',encoding='utf-8')
 manifest=[]
 for f in sorted(site.iterdir()):
