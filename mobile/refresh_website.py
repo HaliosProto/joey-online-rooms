@@ -22,6 +22,13 @@ bridge_name='game-archives-'+hashlib.sha256(code.encode()).hexdigest()[:12]+'.js
 html=site/'boxedwine.html';content=html.read_text(encoding='utf-8');content=re.sub(r'<script src=["\']?game-archives-[^>]+></script>','',content)
 if content.count('<script src=room-transport.js>')!=1:raise ValueError('Unexpected original runtime HTML')
 content=content.replace('<script src=room-transport.js>',f'<script src="{bridge_name}"></script><script src=room-transport.js>');html.write_text(content,encoding='utf-8')
+# Existing visitors may still have an older service worker or HTTP cache.
+# Give changed runtime scripts new URLs without touching their saved game.
+for stem in ('boxedwine-shell','game-controls'):
+    source=site/(stem+'.js');target=stem+'-'+hashlib.sha256(source.read_bytes()).hexdigest()[:12]+'.js';shutil.copyfile(source,site/target)
+    content,count=re.subn(r'<script src=["\']?'+stem+r'(?:-[a-f0-9]{12})?\.js["\']?>',f'<script src="{target}">',content)
+    if count!=1:raise ValueError('Unexpected runtime script reference: '+stem)
+html.write_text(content,encoding='utf-8')
 for name in ('mobile.js','mobile.css'):
     source=site/name;target=f'mobile-{hashlib.sha256(source.read_bytes()).hexdigest()[:12]}{source.suffix}';source.rename(site/target)
     for page in ['index.html','licenses.html']:
