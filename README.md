@@ -10,6 +10,8 @@ https://haliosproto.github.io/joey-online-rooms/
 
 Press **Play game**. The website runs the supplied original Joey the Passion executable, including Joey's AI, single/match duels, deck editing, card rewards/progression, graphics and voices, plus the public online room companion. No installer, ZIP extraction, APK or App Store listing is required. Both computer and phone players use the same website.
 
+Background music is disabled on the website. Joey's voices and game sound effects remain enabled. The browser package silences only the music WAV samples, preserving their headers, durations, all other sounds, the executable and game data. Existing desktop release archives are unchanged.
+
 The browser still transfers the game files automatically on the first visit and caches them where storage allows. The original assets are large (about 573 MB); initial loading and startup can take several minutes. Running the original game in a browser is demanding, and mobile performance remains limited. Saves stay in this browser/device under the existing `joey-online-v1` storage key.
 
 A separate experimental card-client rewrite under `fast/` is not the original game and does not include Joey's AI/campaign. It is not the selected solution for this project. Existing links to it are being redirected to the original game.

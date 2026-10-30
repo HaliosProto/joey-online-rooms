@@ -4,7 +4,7 @@ The Android APK loads the same HTTPS game site used by the iPhone Home Screen ap
 
 ## Refresh the website without rebuilding the original game
 
-Run `original-website.yml` with a Pages artifact containing the verified original archive parts. It replaces only the launcher/controls/service worker, exercises original Single Duel in desktop Chromium, touch Chromium and touch WebKit, and publishes only after all three checks pass when `publish=true`. The main site uses a single Play game button; files load automatically and cache as they stream. `original-deploy-tested.yml` republishes a qualified site and corrects earlier shared rewrite links.
+Run `original-website.yml` with a Pages artifact containing the verified original archive parts. It updates the launcher and silences only music PCM in Voice.dat, preserving voice/effect bytes, WAV timing, the executable and game data. It exercises original Single Duel in desktop Chromium, touch Chromium, touch WebKit and both engines with storage denied. Normal-browser checks additionally measure silent idle-menu output, audible menu effects and Joey's introduction. It publishes only after all five checks pass when `publish=true`. The main site uses a single Play game button; files load automatically and cache where allowed. `original-deploy-tested.yml` republishes a qualified site and corrects earlier shared rewrite links.
 
 ## Rebuild in the cloud
 
@@ -16,7 +16,7 @@ Run `original-website.yml` with a Pages artifact containing the verified origina
 
 The APK uses an owner-controlled release signing identity in encrypted GitHub Actions secrets. `create_android_signing.py` refuses to replace existing signing secrets. The encrypted local backup under ignored `bundles/` is protected by the original Windows user's DPAPI credentials. Preserve that backup and Windows recovery access; never publish the key/password or replace the signing identity when updating the APK.
 
-Site assets are assembled from verified inputs in cloud CI and published through GitHub Pages. Large game/runtime archives are split into 16 MiB resumable cache entries and streamed back to the emulator by the service worker. Cache keys include asset SHA-256 values so an update can replace controls without clearing the IndexedDB Wine prefix and saves. Save data uses the stable `joey-online-v1` key. Save backups include the Wine prefix overlay; the Android system file picker and iPhone sharing/download flow export a ZIP.
+Site assets are assembled from verified inputs in cloud CI and published through GitHub Pages. Large game/runtime archives are split into 16 MiB parts and streamed to the emulator by a page-local fetch adapter; service workers and caching are optional. Music-free parts have new content-based URLs so older browser caches cannot restore music. Cache keys include asset SHA-256 values so an update can replace controls without clearing the IndexedDB Wine prefix and saves. Save data uses the stable `joey-online-v1` key. Save backups include the Wine prefix overlay; the Android system file picker and iPhone sharing/download flow export a ZIP.
 
 `room-transport.js` accepts only the emulator's loopback TCP port 80 and the fixed room protocol. It is not a general TCP proxy. Native HTTP/WebSocket requests become HTTPS/WSS browser requests. The Worker permits the published mobile origin and preserves originless desktop clients. Browser host credentials use a WebSocket subprotocol that the Worker translates into the existing per-room authorization header.
 
