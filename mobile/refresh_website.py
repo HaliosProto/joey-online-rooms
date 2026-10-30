@@ -14,6 +14,10 @@ for name in ('mobile.js','mobile.css'):
     for page in ['index.html','licenses.html']:
         file=site/page;file.write_text(file.read_text(encoding='utf-8').replace(name,target),encoding='utf-8')
 shutil.copyfile(site/'index.html',site/'legacy.html')
+alternate=site/'fast/index.html'
+if alternate.is_file():
+    shutil.copyfile(alternate,site/'fast/experimental-client.html')
+    alternate.write_text('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=../"><title>Original Joey the Passion</title></head><body><a href="../">Play the original Joey the Passion game</a></body></html>',encoding='utf-8')
 manifest=[]
 for f in sorted(site.iterdir()):
     if f.is_file() and (f.suffix in ('.js','.css','.wasm','.png') or '.part' in f.name) and f.name!='sw.js':

@@ -1,6 +1,6 @@
-# Joey Fast
+# Experimental card-client rewrite
 
-The emulator-free successor to the compatibility preview. The duel core is compiled directly to WebAssembly and the interface uses the browser's native rendering and touch controls. The host's device runs the rules engine; the existing free room service relays messages.
+This experiment is not the original Joey the Passion game and was rejected as the requested replacement. The selected website runs the complete original game. The duel core is compiled directly to WebAssembly and the interface uses the browser's native rendering and touch controls. The host's device runs the rules engine; the existing free room service relays messages.
 
 This uses a new duel protocol. Both friends must use Joey Fast. Existing Windows/Mac compatibility downloads remain available separately.
 

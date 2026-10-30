@@ -1,0 +1,54 @@
+name: Publish verified original game website
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+  pages: write
+  id-token: write
+concurrency:
+  group: mobile-site
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Require successful original-game checks on desktop and touch browsers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN: ${{ inputs.build_run }}
+        run: |
+          gh api "repos/HaliosProto/joey-online-rooms/actions/runs/$BUILD_RUN" > /tmp/original-run.json
+          python3 -c "import json;r=json.load(open('/tmp/original-run.json'));assert r['conclusion']=='success' and r['path']=='.github/workflows/original-website.yml' and r['head_branch']=='main'"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: original-game-website
+          path: site
+          run-id: ${{ inputs.build_run }}
+          github-token: ${{ github.token }}
+      - name: Point earlier shared links to the verified original game
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          p=Path('site/fast/index.html')
+          if p.exists():
+              shutil.copyfile(p,p.with_name('experimental-client.html'))
+              p.write_text('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=../"><title>Original Joey the Passion</title></head><body><a href="../">Play the original Joey the Passion game</a></body></html>')
+          PY
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: site
+          retention-days: 1
+      - name: Publish the verified original game and corrected shared links
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e

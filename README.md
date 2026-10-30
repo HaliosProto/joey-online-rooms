@@ -4,15 +4,17 @@ A native multiplayer companion for Yu-Gi-Oh! Power of Chaos: Joey the Passion, w
 
 ## Download and play
 
-**Joey Fast: rewritten mobile and computer multiplayer client:**
+**Play the complete original game on the website (computer and mobile):**
 
-https://haliosproto.github.io/joey-online-rooms/fast/
+https://haliosproto.github.io/joey-online-rooms/
 
-This version removes the Windows emulator. It uses a dedicated duel engine compiled directly to WebAssembly, touch controls, the original card artwork, deck building and free cloud rooms. On iPhone, open it in Safari and choose **Share -> Add to Home Screen**. Android and computer players open the same link; both friends use Joey Fast. The existing Android launcher opens the updated main site.
+Press **Play game**. The website runs the supplied original Joey the Passion executable, including Joey's AI, single/match duels, deck editing, card rewards/progression, graphics and voices, plus the public online room companion. No installer, ZIP extraction, APK or App Store listing is required. Both computer and phone players use the same website.
 
-All 771 original card entries are represented, with alternate artwork grouped under 768 actual card IDs. The client uses a classic five-zone field and contemporary effect scripts, with some ruling differences from the original executable. Original campaign/AI, voice sequences and saved collections are separate. Practice controls both players on one device. See [fast/README.md](fast/README.md) and TESTING.md for scope and verification.
+The browser still transfers the game files automatically on the first visit and caches them where storage allows. The original assets are large (about 573 MB); initial loading and startup can take several minutes. Running the original game in a browser is demanding, and mobile performance remains limited. Saves stay in this browser/device under the existing `joey-online-v1` storage key.
 
-The original compatibility versions below remain available separately.
+A separate experimental card-client rewrite under `fast/` is not the original game and does not include Joey's AI/campaign. It is not the selected solution for this project. Existing links to it are being redirected to the original game.
+
+Optional desktop downloads remain available:
 
 **Windows: full game + configured multiplayer:**
 https://github.com/HaliosProto/joey-online-rooms/releases/tag/full-game-preview-2
