@@ -49,7 +49,8 @@ def export(game,output,scripts,db):
     image_names=[line.strip() for line in arc.read('card/list_card.txt').decode('utf-8-sig').splitlines() if line.strip() and not line.startswith('//')]
     connection=sqlite3.connect(db);connection.row_factory=sqlite3.Row
     valid_codes={r[0] for r in connection.execute('SELECT id FROM datas')}
-    canonical={r['name'].casefold():r['id'] for r in connection.execute('SELECT id,name FROM texts') if r['id'] in valid_codes}
+    # Prefer the actual script-owning card over alternate-art alias entries.
+    canonical={r['name'].casefold():r['id'] for r in connection.execute('SELECT t.id,t.name FROM texts t JOIN datas d ON t.id=d.id ORDER BY (d.alias=0)') if r['id'] in valid_codes}
     catalog=[];by_original={};by_code={};original_count=0
     for i,image in enumerate(image_names):
         if i*2+2>len(ids):break
@@ -108,6 +109,7 @@ def export(game,output,scripts,db):
     missing=[c['name'] for c in catalog if str(c['id']) not in cards]
     if missing:raise ValueError('Engine lacks original cards: '+str(missing))
     files={p.name:p.read_text(encoding='utf-8-sig') for p in scripts.glob('*.lua')}
+    constants={name:int(value) for text in files.values() for name,value in re.findall(r'\b(CARD_[A-Z0-9_]+)\s*=\s*(\d+)',text)}
     # Include all scripts for this era, plus explicit dependencies and token scripts.
     wanted={f"c{c['id']}.lua" for c in catalog}
     official={p.name:p for p in (scripts/'official').glob('*.lua')}
@@ -116,7 +118,8 @@ def export(game,output,scripts,db):
         name=queue.pop()
         if name in files or name not in official:continue
         text=official[name].read_text(encoding='utf-8-sig');files[name]=text
-        for dependency in re.findall(r'c\d+\.lua',text)+[f'c{x}.lua' for x in re.findall(r'LoadCardScript\(\s*(\d+)',text)]:
+        codes=[int(value) if value.isdecimal() else constants.get(value) for value in re.findall(r'LoadCardScript(?:Alias)?\(\s*([A-Z_0-9]+)',text)]
+        for dependency in re.findall(r'c\d+\.lua',text)+[f'c{x}.lua' for x in codes if x]:
             if dependency not in files:queue.append(dependency)
     if original_count!=771:raise ValueError(f'Original card coverage mismatch: {original_count}/771')
     for name,data in [('catalog.json',{'cards':catalog,'tokens':tokens,'originalCardEntries':original_count,'starter':{'main':main,'extra':extra}}),('rules.json',{'cards':cards,'texts':texts,'scripts':files})]:
