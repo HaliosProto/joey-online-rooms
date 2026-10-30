@@ -37,15 +37,15 @@
  let measuring=false;
  window.joeyMeasurePerformance=async()=>{
   if(measuring)throw Error('A performance check is already running.');measuring=true;
-  const start=performance.now(),frames=[],delays=[],longTasks=[],restore=[];let lastFrame=start,lastTimer=start,active=true,drawCalls=0,renderIntervals=0,drew=false,observer;
+  const start=performance.now(),frames=[],delays=[],longTasks=[],restore=[],renderCallsByApi={};let lastFrame=start,lastTimer=start,active=true,drawCalls=0,renderIntervals=0,drew=false,observer;
   const onFrame=time=>{if(!active)return;frames.push(time-lastFrame);lastFrame=time;if(drew)renderIntervals++;drew=false;requestAnimationFrame(onFrame);};
   const onTimer=()=>{if(!active)return;const now=performance.now();delays.push(Math.max(0,now-lastTimer-50));lastTimer=now;setTimeout(onTimer,50);};
   try{
-   for(const Constructor of [globalThis.WebGLRenderingContext,globalThis.WebGL2RenderingContext]){
+   for(const Constructor of [globalThis.CanvasRenderingContext2D,globalThis.WebGLRenderingContext,globalThis.WebGL2RenderingContext]){
     const proto=Constructor?.prototype;if(!proto)continue;
-    for(const name of ['drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced']){
+    for(const name of ['putImageData','drawImage','drawArrays','drawElements','drawArraysInstanced','drawElementsInstanced']){
      const original=proto[name];if(typeof original!=='function')continue;
-     const wrapped=function(...args){drawCalls++;drew=true;return original.apply(this,args);};
+     const wrapped=function(...args){drawCalls++;drew=true;renderCallsByApi[name]=(renderCallsByApi[name]||0)+1;return original.apply(this,args);};
      try{proto[name]=wrapped;restore.push(()=>{if(proto[name]===wrapped)proto[name]=original;});}catch{}
     }
    }
@@ -57,11 +57,14 @@
    let graphics={};
    const display=document.getElementById('boxedwine-webgl-canvas-0'),style=display&&getComputedStyle(display);
    const surface=display&&display.width&&style.display!=='none'&&style.visibility!=='hidden'?display:canvas;
-   for(const kind of ['webgl2','webgl']){
+   let software;try{software=surface.getContext('2d');}catch{}
+   if(software)graphics={context:'2d-framebuffer',note:'The original game presents software pixels through Canvas 2D; this does not indicate whether Chrome GPU acceleration is enabled.'};
+   for(const kind of software?[]:['webgl2','webgl']){
     let gl;try{gl=surface.getContext(kind);}catch{}if(!gl)continue;
     const ext=gl.getExtension('WEBGL_debug_renderer_info');graphics={context:kind,renderer:ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),vendor:ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL):gl.getParameter(gl.VENDOR),lost:gl.isContextLost()};break;
    }
-   return {format:'joey-performance-v1',created:new Date().toISOString(),seconds:Math.round(seconds*10)/10,browser:navigator.userAgent,logicalProcessors:navigator.hardwareConcurrency,memoryLimitGiB:navigator.deviceMemory??null,visibility:document.visibilityState,storage:new URLSearchParams(location.search).get('storage'),runtimeHeapMiB:Module.HEAPU8?Math.round(Module.HEAPU8.buffer.byteLength/1048576):null,graphics,canvas:{width:surface.width,height:surface.height},browserAnimation:summary(frames),timerDelay:summary(delays),longTasks,renderCalls:drawCalls,renderIntervals,renderIntervalsPerSecond:Math.round(renderIntervals/seconds*10)/10,note:'Browser animation and render intervals are diagnostics, not a measurement of game simulation FPS. No saves, player names or room credentials are included.',runtimeLog:performanceLog.slice()};
+   const heap=Module.HEAPU8?.buffer||Module.HEAPU32?.buffer;
+   return {format:'joey-performance-v1',created:new Date().toISOString(),seconds:Math.round(seconds*10)/10,browser:navigator.userAgent,logicalProcessors:navigator.hardwareConcurrency,memoryLimitGiB:navigator.deviceMemory??null,visibility:document.visibilityState,storage:new URLSearchParams(location.search).get('storage'),runtimeScripts:Array.from(document.scripts,s=>s.src.split('/').pop()).filter(Boolean),runtimeHeapMiB:heap?Math.round(heap.byteLength/1048576):null,graphics,canvas:{width:surface.width,height:surface.height},browserAnimation:summary(frames),timerDelay:summary(delays),longTasks,renderCalls:drawCalls,renderCallsByApi,renderIntervals,renderIntervalsPerSecond:Math.round(renderIntervals/seconds*10)/10,note:'Browser animation and render intervals are diagnostics, not a measurement of game simulation FPS. No saves, player names or room credentials are included.',runtimeLog:performanceLog.slice()};
   }finally{active=false;observer?.disconnect();for(const undo of restore)undo();measuring=false;}
  };
 })();
