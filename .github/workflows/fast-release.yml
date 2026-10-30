@@ -1,0 +1,105 @@
+name: Publish qualified emulator-free client
+on:
+  workflow_dispatch:
+    inputs:
+      chromium_run:
+        type: string
+        required: true
+      webkit_run:
+        type: string
+        required: true
+      legacy_run:
+        type: string
+        default: '40964976814'
+permissions:
+  contents: write
+  actions: read
+  pages: write
+  id-token: write
+concurrency:
+  group: mobile-site
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Require successful duels in both browser engines from the same source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHROMIUM_RUN: ${{ inputs.chromium_run }}
+          WEBKIT_RUN: ${{ inputs.webkit_run }}
+        run: |
+          gh api "repos/HaliosProto/joey-online-rooms/actions/runs/$CHROMIUM_RUN" > /tmp/chromium-run.json
+          gh api "repos/HaliosProto/joey-online-rooms/actions/runs/$WEBKIT_RUN" > /tmp/webkit-run.json
+          python3 - <<'PY'
+          import json,os
+          a=json.load(open('/tmp/chromium-run.json'));b=json.load(open('/tmp/webkit-run.json'))
+          assert a['conclusion']==b['conclusion']=='success'
+          assert a['path']==b['path']=='.github/workflows/fast-preview.yml'
+          assert a['head_sha']==b['head_sha'] and a['head_branch']==b['head_branch']=='main'
+          with open(os.environ['GITHUB_ENV'],'a') as f:f.write('QUALIFIED_SHA='+a['head_sha']+'\n')
+          PY
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: fast-tested-site
+          path: site/fast
+          run-id: ${{ inputs.chromium_run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: github-pages
+          path: legacy-artifact
+          run-id: ${{ inputs.legacy_run }}
+          github-token: ${{ github.token }}
+      - name: Preserve the original mobile compatibility version and desktop downloads
+        run: |
+          tar -xf legacy-artifact/artifact.tar -C site
+          mv site/index.html site/legacy.html
+          cat > site/index.html <<'HTML'
+          <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=fast/"><title>Joey Fast</title></head><body><p><a href="fast/">Open the faster mobile version</a></p><p><a href="legacy.html">Original compatibility version</a></p></body></html>
+          HTML
+          test -f site/fast/index.html
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: n1xx1/ocgcore-wasm
+          ref: 6e9a76d6b8aa38339145db3834505b9c22ec29ba
+          submodules: recursive
+          path: corresponding-source/engine
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ProjectIgnis/CardScripts
+          ref: 2ddefd0115a122f8cd3f494b6affbcbc27b4f974
+          path: corresponding-source/card-scripts
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ProjectIgnis/BabelCDB
+          ref: 2e6f985a5537d9b16ec7396787b5279d94af419d
+          path: corresponding-source/card-database
+      - name: Package the exact corresponding client, core, Lua and card-script sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/HaliosProto/joey-online-rooms/tarball/$QUALIFIED_SHA" > corresponding-source/Joey-Client-Source.tar.gz
+          printf '%s\n' "$QUALIFIED_SHA" > corresponding-source/CLIENT-REVISION.txt
+          git -C corresponding-source/engine submodule status --recursive > corresponding-source/ENGINE-REVISIONS.txt
+          tar --exclude=.git -czf Joey-Fast-Corresponding-Source.tar.gz corresponding-source
+          sha256sum Joey-Fast-Corresponding-Source.tar.gz > Joey-Fast-Corresponding-Source.sha256
+          cp fast/release-notes.md /tmp/fast-release.md
+          printf '\nQualified source: `%s`.\n' "$QUALIFIED_SHA" >> /tmp/fast-release.md
+          gh release create fast-preview-1 Joey-Fast-Corresponding-Source.tar.gz Joey-Fast-Corresponding-Source.sha256 --draft --prerelease --target "$QUALIFIED_SHA" --title 'Joey Fast - emulator-free mobile preview' --notes-file /tmp/fast-release.md
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: site
+          retention-days: 1
+      - name: Publish the exact tested client
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+      - name: Publish release and corresponding sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit fast-preview-1 --draft=false --prerelease

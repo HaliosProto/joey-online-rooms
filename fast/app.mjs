@@ -37,7 +37,7 @@ async function ensureWorker(){
    metrics.engine=data.metrics;views=data.views;pending=false;
    if(mode==='host'){applyView(views[0]);try{roomService.send({kind:'state',view:views[1]});}catch(error){status(error.message,true);}}
    else if(mode==='practice')applyView(views[views[0].waitingFor??0]);
-  }else if(data.kind==='error'){pending=false;status(data.message,true);rejectWorker?.(Error(data.message));}
+  }else if(data.kind==='error'){pending=false;console.error(data.stack||data.message);status(data.message,true);rejectWorker?.(Error(data.message));}
  };
  worker.onerror=()=>{pending=false;const error=Error('The duel engine could not load. Reload and try again.');status(error.message,true);rejectWorker?.(error);};
  worker.postMessage({kind:'init'});return workerReady;

@@ -5,7 +5,8 @@ import {validateDeck} from './deck.mjs';
 export {validateDeck} from './deck.mjs';
 
 const PROMPTS=new Set([10,11,12,13,14,15,16,18,19,20,21,22,23,24,25,26,132,140,141,142,143]);
-const QUERY=1|2|8|16|256|512|0x100000|0x1000000;
+// The upstream wrapper does not decode QUERY_TYPE; type comes from our catalog.
+const QUERY=1|2|16|256|512|0x100000|0x1000000;
 export class DuelSession{
  static async create(rules,catalog,wasmBinary){
   const started=performance.now();
