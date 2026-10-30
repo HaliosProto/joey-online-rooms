@@ -50,7 +50,7 @@ def export(game,output,scripts,db):
     catalog=[];by_original={}
     for i,image in enumerate(image_names):
         if i*2+2>len(ids):break
-        original=struct.unpack_from('<H',ids,i*2)[0];code=struct.unpack_from('<I',passes,i*4)[0];prop=struct.unpack_from('<I',props,i*4)[0];pack=struct.unpack_from('<H',packs,i*2)[0]
+        original=struct.unpack_from('<H',ids,i*2)[0];passcode=passes[i*4:i*4+4].hex();code=int(passcode) if passcode.isdecimal() else 0;prop=struct.unpack_from('<I',props,i*4)[0];pack=struct.unpack_from('<H',packs,i*2)[0]
         name=names[i*64:(i+1)*64].split(b'\0')[0].decode('utf-8');start=struct.unpack_from('<I',indices,i*4)[0];text=desc[start:].split(b'\0')[0].decode('utf-8')
         if not name or not code or not pack&4:continue
         path='card/'+image.replace('\\','/').split('/')[-1]

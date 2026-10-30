@@ -110,7 +110,7 @@ function inspect(card){
  if(plan?.options.some(x=>x.card===card.code&&x.response)){selected=card.code;renderChoices();}
  $('card-detail').replaceChildren();const layout=node('div',undefined,'detail'),text=node('div');text.append(node('h2',c.name),node('p',`${c.kind==='monster'||c.kind==='fusion'||c.kind==='ritual'?`Level ${c.level} · ATK ${card.attack??c.attack} / DEF ${card.defense??c.defense}`:c.kind.toUpperCase()}`,'numbers'),node('p',c.text));
  const actions=plan?.options.filter(x=>x.card===card.code&&x.response)||[];
- for(const action of actions)text.append(button(action.label,()=>{$('card-dialog').close();respond(action.response);},'primary'));
+ for(const action of actions){const b=button(action.label,()=>{$('card-dialog').close();respond(action.response);},'primary');b.dataset.choice=plan.options.indexOf(action);text.append(b);}
  layout.append(image(c.id),text);$('card-detail').append(layout);$('card-dialog').showModal();
 }
 function showPile(pile,title){$('card-detail').replaceChildren(node('h2',title));const row=node('div');row.style.cssText='display:flex;gap:8px;flex-wrap:wrap';for(const card of pile.filter(Boolean)){const b=cardButton(card);b.onclick=()=>{if(!card.hidden){$('card-dialog').close();inspect(card);}};row.append(b);}$('card-detail').append(row);$('card-dialog').showModal();}
@@ -130,6 +130,7 @@ function renderChoices(){
    const key=option.index??option.flag;const a=plan.order?order:selections,index=a.indexOf(key);if(index<0)a.push(key);else a.splice(index,1);renderChoices();
   });
   if(option.card)b.append(image(option.card));b.append(node('span',option.label));
+  b.dataset.choice=plan.options.indexOf(option);
   const key=option.index??option.flag;if((plan.order?order:selections).includes(key))b.setAttribute('aria-pressed','true');
   if(plan.order&&order.includes(key))b.append(node('small',String(order.indexOf(key)+1)));
   if(plan.counters)b.append(node('small',`${counters[option.index]||0}/${option.max}`));

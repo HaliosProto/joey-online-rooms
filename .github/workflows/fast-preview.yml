@@ -1,0 +1,64 @@
+name: Qualify emulator-free mobile client
+on:
+  workflow_dispatch:
+    inputs:
+      engine_run:
+        type: string
+        default: '41017333199'
+      cards_run:
+        type: string
+        required: true
+      browser:
+        type: choice
+        options: [chromium, webkit]
+        default: chromium
+permissions:
+  contents: read
+  actions: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: fast-duel-engine
+          path: fast-vendor
+          run-id: ${{ inputs.engine_run }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: fast-original-cards
+          path: fast-assets
+          run-id: ${{ inputs.cards_run }}
+          github-token: ${{ github.token }}
+      - name: Build directly executed client
+        run: |
+          npm ci --prefix fast
+          node fast/build.mjs
+      - name: Install cloud browser
+        working-directory: fast
+        run: npx playwright install --with-deps ${{ inputs.browser }}
+      - name: Start isolated room service
+        run: |
+          cd cloud
+          npm ci
+          node node_modules/wrangler/bin/wrangler.js dev --local --port 8787 > /tmp/joey-service.log 2>&1 &
+          node --input-type=module -e 'for(let i=0;i<60;i++){try{if((await fetch("http://127.0.0.1:8787/health")).ok)process.exit(0);}catch{}await new Promise(r=>setTimeout(r,1000));}process.exit(1);'
+      - name: Complete an actual two-client duel through the touch interface
+        env:
+          FAST_BROWSER: ${{ inputs.browser }}
+        run: node fast/test-browser.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: fast-test-results
+          path: fast-results/
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: success()
+        with:
+          name: fast-tested-site
+          path: fast-build/
+          retention-days: 7
