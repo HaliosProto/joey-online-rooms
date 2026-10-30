@@ -14,7 +14,7 @@ function storedName(){try{return localStorage.getItem('joey-fast-name')||'';}cat
 function playerName(){const value=$('player-name').value.trim();if(!value||value.length>32||/[\x00-\x1f\x7f]/.test(value))throw Error('Enter your duelist name first.');try{localStorage.setItem('joey-fast-name',value);}catch{}return value;}
 async function init(){
  try{
-  catalog=await fetch('catalog.json').then(r=>{if(!r.ok)throw Error('Card files are unavailable.');return r.json();});cards=new Map(catalog.cards.map(c=>[c.id,c]));labels=Object.fromEntries(catalog.cards.map(c=>[c.id,{name:c.name,strings:c.strings||[]}]));deck=readSaved();
+  catalog=await fetch('catalog.json').then(r=>{if(!r.ok)throw Error('Card files are unavailable.');return r.json();});cards=new Map([...catalog.cards,...(catalog.tokens||[])].map(c=>[c.id,c]));labels=Object.fromEntries([...cards.values()].map(c=>[c.id,{name:c.name,strings:c.strings||[]}]));deck=readSaved();
   $('player-name').value=storedName();$('lobby').hidden=false;status('Choose a room or create a table for your friend.');
   for(const card of [catalog.cards.find(c=>c.name==='Red-Eyes B. Dragon'),catalog.cards.find(c=>c.name==='Blue-Eyes White Dragon'),catalog.cards.find(c=>c.name==='Dark Magician')].filter(Boolean))document.querySelector('.featured').append(image(card.id));
   metrics.interfaceReadyMs=performance.now()-metrics.pageStart;window.joeyMetrics=metrics;await refresh();poll=setInterval(()=>{if(mode==='lobby')refresh();},15000);

@@ -55,9 +55,13 @@ def export(game,output,scripts,db):
         if i*2+2>len(ids):break
         original=struct.unpack_from('<H',ids,i*2)[0];passcode=passes[i*4:i*4+4].hex();code=int(passcode) if passcode.isdecimal() else 0;prop=struct.unpack_from('<I',props,i*4)[0];pack=struct.unpack_from('<H',packs,i*2)[0]
         name=names[i*64:(i+1)*64].split(b'\0')[0].decode('utf-8');start=struct.unpack_from('<I',indices,i*4)[0];text=desc[start:].split(b'\0')[0].decode('utf-8')
-        if not name or not code or not pack&7:continue
+        if not name or not pack&7:continue
+        # Special/prize cards have FFFFFFFF instead of an enterable password.
+        # Alternate-art entries can also carry synthetic passwords.
+        lookup={'b. skull dragon':'black skull dragon'}.get(name.casefold(),name.casefold())
+        if lookup in canonical:code=canonical[lookup]
         if code not in valid_codes:
-            code=canonical.get(name.casefold(),0)
+            code=canonical.get(lookup,0)
             if not code:raise ValueError('No duel-engine ID for original card: '+name)
         path='card/'+image.replace('\\','/').split('/')[-1]
         if path.casefold() not in arc.entries:raise ValueError('Missing card art: '+path)
@@ -93,6 +97,14 @@ def export(game,output,scripts,db):
     for card in catalog:
         text=texts.get(str(card['id']),{})
         card['originalText']=card['text'];card['text']=text.get('text',card['text']);card['strings']=text.get('strings',[])
+    tokens=[]
+    for code,text in texts.items():
+        if not cards[code]['type']&0x4000:continue
+        token_name=text['name'].casefold()
+        art=next((art for word,art in [('sheep','token_sh.bmp'),('kuriboh','token_ku.bmp'),('slime','token_sl.bmp'),('insect','token_in.bmp')] if word in token_name),None)
+        if art and 'card/'+art in arc.entries:
+            bitmap=Image.open(io.BytesIO(arc.read('card/'+art)));bitmap.convert('RGB').save(images/f'{code}.webp','WEBP',quality=86)
+            tokens.append({'id':int(code),'name':text['name'],'text':text['text'],'image':f'cards/{code}.webp','kind':'token','level':cards[code]['level'],'attack':cards[code]['attack'],'defense':cards[code]['defense'],'strings':text['strings']})
     missing=[c['name'] for c in catalog if str(c['id']) not in cards]
     if missing:raise ValueError('Engine lacks original cards: '+str(missing))
     files={p.name:p.read_text(encoding='utf-8-sig') for p in scripts.glob('*.lua')}
@@ -106,7 +118,8 @@ def export(game,output,scripts,db):
         text=official[name].read_text(encoding='utf-8-sig');files[name]=text
         for dependency in re.findall(r'c\d+\.lua',text)+[f'c{x}.lua' for x in re.findall(r'LoadCardScript\(\s*(\d+)',text)]:
             if dependency not in files:queue.append(dependency)
-    for name,data in [('catalog.json',{'cards':catalog,'originalCardEntries':original_count,'starter':{'main':main,'extra':extra}}),('rules.json',{'cards':cards,'texts':texts,'scripts':files})]:
+    if original_count!=771:raise ValueError(f'Original card coverage mismatch: {original_count}/771')
+    for name,data in [('catalog.json',{'cards':catalog,'tokens':tokens,'originalCardEntries':original_count,'starter':{'main':main,'extra':extra}}),('rules.json',{'cards':cards,'texts':texts,'scripts':files})]:
         (output/name).write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     print(json.dumps({'cards':len(catalog),'scripts':len(files),'rulesBytes':(output/'rules.json').stat().st_size,'artBytes':sum(p.stat().st_size for p in images.iterdir()),'starterCards':len(main)},indent=2))
 

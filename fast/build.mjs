@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 const here=resolve(import.meta.dirname),root=resolve(here,'..'),out=join(root,'fast-build'),vendor=join(root,'fast-vendor'),assets=join(root,'fast-assets');
 await mkdir(out,{recursive:true});await cp(assets,out,{recursive:true});await cp(join(here,'web'),out,{recursive:true});
 const sourceNames=['app.mjs','rooms.mjs','engine.mjs','engine-worker.mjs','prompts.mjs','deck.mjs'];
-const hash=createHash('sha256');for(const file of sourceNames)hash.update(await readFile(join(here,file)));hash.update(await readFile(join(out,'catalog.json')));hash.update(await readFile(join(out,'rules.json')));const version=hash.digest('hex').slice(0,16);
+const hash=createHash('sha256');for(const file of sourceNames)hash.update(await readFile(join(here,file)));for(const file of (await readdir(join(here,'web'))).sort())hash.update(await readFile(join(here,'web',file)));hash.update(await readFile(join(vendor,'lib/ocgcore.sync.wasm')));hash.update(await readFile(join(out,'catalog.json')));hash.update(await readFile(join(out,'rules.json')));const version=hash.digest('hex').slice(0,16);
 await cp(join(vendor,'lib/ocgcore.sync.wasm'),join(out,'engine.wasm'));
 const plugin={name:'pinned-core-and-versioned-data',setup(b){
  b.onResolve({filter:/^ocgcore-wasm$/},()=>({path:join(vendor,'src/index.ts')}));
