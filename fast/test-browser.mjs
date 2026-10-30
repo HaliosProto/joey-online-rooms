@@ -35,6 +35,8 @@ async function drive(p){
 }
 try{
  await load(page,'Cloud Host');await page.screenshot({path:'fast-results/lobby.png',fullPage:true});
+ const effectInit=await page.evaluate(async()=>{const {qualify}=await import('./qualification.mjs');return await qualify();});
+ await writeFile('fast-results/card-initializers.json',JSON.stringify(effectInit));
  const catalog=JSON.parse(await readFile('fast-build/catalog.json','utf8')),rules=JSON.parse(await readFile('fast-build/rules.json','utf8'));
  // Normal monsters isolate actual summon, tribute-free placement, battle and win flow.
  const normals=catalog.cards.filter(c=>c.kind==='monster'&&c.level<=4&&(rules.cards[c.id]?.type&16)&&c.attack>0).slice(0,20);const main=normals.flatMap(c=>[c.id,c.id]).slice(0,40);if(main.length!==40)throw Error('Missing qualification deck');

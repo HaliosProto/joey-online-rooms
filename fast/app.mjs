@@ -88,7 +88,7 @@ function render(){
  $('surrender').disabled=view.winner!==null;
 }
 function renderSide(player,opponent){
- const state=view.players[player],side=node('section',undefined,'side'),hud=node('div',undefined,'player-hud');hud.append(node('strong',names[player]),node('span',`${state.hand.filter(Boolean).length} cards in hand`),node('span',`${state.lp.toLocaleString()} LP`,'life'));
+ const state=view.players[player],side=node('section',undefined,'side'),hud=node('div',undefined,'player-hud');hud.append(node('strong',names[player]),node('span',`Hand ${state.hand.filter(Boolean).length}`),node('span',`${state.lp.toLocaleString()} LP`,'life'));
  for(const [part,label] of [['grave','Grave'],['banished','Banished'],['extra','Fusion']])hud.append(button(`${label} ${state[part].filter(Boolean).length}`,()=>showPile(state[part],`${names[player]} · ${label}`)));
  side.append(hud);const rows=node('div',undefined,'rows');
  for(const [part,location] of (opponent?[['spells',8],['monsters',4]]:[['monsters',4],['spells',8]])){
