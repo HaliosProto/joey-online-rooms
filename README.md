@@ -12,6 +12,8 @@ Press **Play game**. The website runs the supplied original Joey the Passion exe
 
 Background music is disabled on the website. Joey's voices and game sound effects remain enabled. The browser package silences only the music WAV samples, preserving their headers, durations, all other sounds, the executable and game data. Existing desktop release archives are unchanged.
 
+For a persistent slowdown, open the game and choose **Check speed**, keep playing with the tab visible for 10 seconds, then choose **Download report**. The JSON report includes browser/build information, emulator speed logs, drawing activity and browser timing. It contains no saved game, player names or room credentials, and is downloaded locally rather than sent automatically. Compare a slow session with a fast one on the same game screen; browser animation timing alone is not game simulation FPS.
+
 The browser still transfers the game files automatically on the first visit and caches them where storage allows. The original assets are large (about 573 MB); initial loading and startup can take several minutes. Running the original game in a browser is demanding, and mobile performance remains limited. Saves stay in this browser/device under the existing `joey-online-v1` storage key.
 
 A separate experimental card-client rewrite under `fast/` is not the original game and does not include Joey's AI/campaign. It is not the selected solution for this project. Existing links to it are being redirected to the original game.
