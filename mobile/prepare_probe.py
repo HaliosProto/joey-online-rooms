@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 import urllib.request
 import zipfile
+from runtime_storage import tolerate_denied_storage
 
 p=argparse.ArgumentParser()
 p.add_argument('--engine',type=Path,required=True)
@@ -31,7 +32,7 @@ shell=a.output/'boxedwine-shell.js'
 text=shell.read_text()
 text=text.replace('Config.envProp = getEnvProp();', 'Config.envProp = "WINEDLLOVERRIDES=dinput=n,b;mscoree,mshtml=";')
 text=text.replace('let params = ["-root", ROOT];', 'let params = ["-root", ROOT, "-env", "WINEDEBUG=+debugstr"];')
-shell.write_text(text)
+shell.write_text(tolerate_denied_storage(text),encoding='utf-8')
 shutil.copyfile(Path(__file__).with_name('room-transport.js'),a.output/'room-transport.js')
 html=a.output/'boxedwine.html'
 html.write_text(html.read_text().replace('<script src=boxedwine-shell.js>', '<script src=room-transport.js></script><script src=boxedwine-shell.js>'))

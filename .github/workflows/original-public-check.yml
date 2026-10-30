@@ -10,6 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, webkit]
+        storage: [normal, restricted]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Install browser tooling
@@ -21,10 +22,11 @@ jobs:
           ORIGINAL_SITE_URL: https://haliosproto.github.io/joey-online-rooms/
           MOBILE_SOLO: 'true'
           MOBILE_BROWSER: ${{ matrix.browser }}
+          BLOCK_BROWSER_STORAGE: ${{ matrix.storage == 'restricted' && 'true' || 'false' }}
         run: node mobile/test_site.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: public-play-${{ matrix.browser }}
+          name: public-play-${{ matrix.browser }}-${{ matrix.storage }}
           path: mobile-test-results/
           retention-days: 7

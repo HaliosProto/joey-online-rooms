@@ -1,6 +1,7 @@
 """Refresh the original-game website without rebuilding or modifying game files."""
 import argparse,hashlib,json,re,shutil
 from pathlib import Path
+from runtime_storage import tolerate_denied_storage
 p=argparse.ArgumentParser();p.add_argument('--site',type=Path,required=True);a=p.parse_args();site=a.site
 previous=(site/'sw.js').read_text(encoding='utf-8')
 match=re.search(r'const VIRTUAL=(\{[^\n]*\});',previous)
@@ -9,6 +10,7 @@ virtual=json.loads(match[1]);assert set(virtual)=={'game.zip','runtime.zip'}
 for data in virtual.values():
     assert all((site/part).is_file() for part in data['parts'])
 for f in Path(__file__).with_name('web').iterdir():shutil.copyfile(f,site/f.name)
+shell=site/'boxedwine-shell.js';shell.write_text(tolerate_denied_storage(shell.read_text(encoding='utf-8')),encoding='utf-8')
 # The runtime uses fetch() for ZIP loading. Intercept only the fixed packaged
 # archives inside its own page, so browsers denying service workers still work.
 hashes={}

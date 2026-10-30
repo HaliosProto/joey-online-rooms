@@ -1,6 +1,5 @@
 // Phone input uses BoxedWine's existing browser mouse entry points.
 (()=>{
- navigator.serviceWorker?.addEventListener('message',event=>{if(event.data?.type==='joey-archive-progress')parent.postMessage(event.data,location.origin);});
  const canvas=document.getElementById('canvas');let active=null,button=0,pressedAt=0;
  const send=(type,x,y)=>{
   const present=document.getElementById('boxedwine-webgl-canvas-0'),style=present&&getComputedStyle(present);
