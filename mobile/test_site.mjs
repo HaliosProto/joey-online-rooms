@@ -4,6 +4,7 @@ import {createServer} from 'node:http';import{createReadStream,statSync,mkdirSyn
 function imageChange(a,b,rect){if(a.width!==b.width||a.height!==b.height)return 1;let n=0,total=0;for(let y=Math.floor(a.height*rect[1]);y<a.height*rect[3];y++)for(let x=Math.floor(a.width*rect[0]);x<a.width*rect[2];x++){const at=(y*a.width+x)*4;if(Math.abs(a.data[at]-b.data[at])+Math.abs(a.data[at+1]-b.data[at+1])+Math.abs(a.data[at+2]-b.data[at+2])>90)n++;total++;}return n/total;}
 function menuWood(image){let brown=0,total=0;for(let y=Math.floor(image.height*.54);y<image.height*.94;y++)for(let x=Math.floor(image.width*.25);x<image.width*.75;x++){const at=(y*image.width+x)*4,r=image.data[at],g=image.data[at+1],b=image.data[at+2];if(r>90&&r>g*1.1&&g>b*1.2)brown++;total++;}return brown/total;}
 async function point(page,x,y){if(process.env.ORIGINAL_DESKTOP==='true')await page.mouse.click(x,y,{delay:150});else await page.touchscreen.tap(x,y);}
+const SITE=process.env.ORIGINAL_SITE_URL||'http://127.0.0.1:8765/';
 const root=resolve('mobile-web');mkdirSync('mobile-test-results',{recursive:true});
 const types={'.wasm':'application/wasm','.js':'text/javascript','.html':'text/html','.css':'text/css','.zip':'application/zip','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png'};
 const server=createServer((req,res)=>{let relative=decodeURIComponent(new URL(req.url,'http://localhost').pathname);if(relative==='/')relative='/index.html';const path=resolve(root,'.'+relative);if(!path.startsWith(root+sep)){res.writeHead(403).end();return;}try{res.writeHead(200,{'Content-Type':types[extname(path)]||'application/octet-stream','Content-Length':statSync(path).size});createReadStream(path).pipe(res);}catch{res.writeHead(404).end();}});
@@ -16,7 +17,7 @@ try{
    module=value;if(value&&typeof value==='object')value['joeyCloudOrigin']=endpoint;
   }});
  },process.env.TEST_SERVER);
- await page.goto('http://127.0.0.1:8765/');await page.screenshot({path:'mobile-test-results/install.png',fullPage:true});
+ await page.goto(SITE);await page.screenshot({path:'mobile-test-results/install.png',fullPage:true});
  await page.setViewportSize({width:844,height:390});await page.locator('#prepare').click();await page.locator('#play').waitFor({state:'visible'});
  const until=Date.now()+12*60000;while(Date.now()<until&&!logs.some(l=>l.includes('integrated cloud networking enabled'))){if(errors.length)throw new Error(errors.join('\n'));await new Promise(r=>setTimeout(r,10000));}
  if(!logs.some(l=>l.includes('integrated cloud networking enabled')))throw new Error('Mobile interface did not start the original game');
@@ -49,7 +50,7 @@ try{
   guest.on('console',m=>guestLogs.push(m.text()));guest.on('pageerror',e=>guestErrors.push(e.stack));
   guest.on('response',async response=>{if(response.request().method()==='GET'&&new URL(response.url()).pathname==='/v1/rooms'){const bytes=await response.body();guestLists.push({status:response.status(),count:bytes.length>=4?bytes.readUInt32LE(0):-1});}});
   try{
-   await guest.goto('http://127.0.0.1:8765/');await guest.setViewportSize({width:844,height:390});await guest.locator('#prepare').click();await guest.locator('#play').waitFor({state:'visible'});
+   await guest.goto(SITE);await guest.setViewportSize({width:844,height:390});await guest.locator('#prepare').click();await guest.locator('#play').waitFor({state:'visible'});
    const guestUntil=Date.now()+12*60000;while(Date.now()<guestUntil&&!guestLogs.some(l=>l.includes('integrated cloud networking enabled'))){if(guestErrors.length)throw new Error(guestErrors.join('\n'));await new Promise(r=>setTimeout(r,10000));}
    if(!guestLogs.some(l=>l.includes('integrated cloud networking enabled')))throw new Error('Second original game did not start');await new Promise(r=>setTimeout(r,5000));
    const guestFrame=guest.frames().find(f=>f.url().includes('boxedwine.html')),guestCanvas=guestFrame.locator('#canvas'),gbox=await guestCanvas.boundingBox();

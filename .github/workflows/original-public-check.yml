@@ -1,0 +1,30 @@
+name: Check public original game Play button
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  fresh-public-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install browser tooling
+        run: |
+          npm install --no-save playwright@1.56.1 pngjs@7.0.0
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Click Play on the real public website with no login or existing cache
+        env:
+          ORIGINAL_SITE_URL: https://haliosproto.github.io/joey-online-rooms/
+          MOBILE_SOLO: 'true'
+          MOBILE_BROWSER: ${{ matrix.browser }}
+        run: node mobile/test_site.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: public-play-${{ matrix.browser }}
+          path: mobile-test-results/
+          retention-days: 7
