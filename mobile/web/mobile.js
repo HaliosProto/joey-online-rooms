@@ -28,7 +28,7 @@ async function prepare(){
 }
 function startGame(){
  started=true;$('welcome').hidden=true;$('play').hidden=false;
- const params=new URLSearchParams({root:'runtime',app:'game',p:'start-game.bat',w:'c:/files/joey',auto:'true',storage:saveMode,storageKey:'joey-online-v1',loader:'direct-archives-v1'});
+ const params=new URLSearchParams({root:'runtime',app:'game',p:'start-game.bat',w:'c:/files/joey',auto:'true',storage:saveMode,storageKey:'joey-online-v1',loader:'music-off-v1'});
  frame.src='boxedwine.html?'+params;button.disabled=true;
 }
 function key(name,code,keyCode){const win=frame.contentWindow;win?.joeyKey?.(name,code,keyCode);}

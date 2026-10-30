@@ -23,6 +23,7 @@ jobs:
           MOBILE_SOLO: 'true'
           MOBILE_BROWSER: ${{ matrix.browser }}
           BLOCK_BROWSER_STORAGE: ${{ matrix.storage == 'restricted' && 'true' || 'false' }}
+          CHECK_GAME_AUDIO: ${{ matrix.storage == 'normal' && 'true' || 'false' }}
         run: node mobile/test_site.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

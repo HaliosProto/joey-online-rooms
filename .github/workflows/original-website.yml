@@ -4,7 +4,7 @@ on:
     inputs:
       source_run:
         type: string
-        default: '41041635330'
+        default: '41047360859'
       publish:
         type: boolean
         default: false
@@ -26,7 +26,7 @@ jobs:
           path: previous-site
           run-id: ${{ inputs.source_run }}
           github-token: ${{ github.token }}
-      - name: Keep the complete original game and replace only the website launcher
+      - name: Preserve the original game and sound effects while silencing music
         run: |
           node --test mobile/archive-loader.test.mjs
           mkdir mobile-web
@@ -71,6 +71,7 @@ jobs:
           MOBILE_BROWSER: ${{ matrix.browser }}
           ORIGINAL_DESKTOP: ${{ matrix.device == 'desktop' && 'true' || 'false' }}
           BLOCK_BROWSER_STORAGE: ${{ matrix.device == 'restricted' && 'true' || 'false' }}
+          CHECK_GAME_AUDIO: ${{ matrix.device != 'restricted' && 'true' || 'false' }}
         run: node mobile/test_site.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

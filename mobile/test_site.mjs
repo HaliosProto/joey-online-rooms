@@ -1,5 +1,6 @@
 import {PNG} from 'pngjs';
 import {chromium,webkit} from 'playwright';
+import {probeAudio} from './probe_audio.mjs';
 import {createServer} from 'node:http';import{createReadStream,statSync,mkdirSync,writeFileSync}from'node:fs';import{resolve,extname,sep}from'node:path';
 function imageChange(a,b,rect){if(a.width!==b.width||a.height!==b.height)return 1;let n=0,total=0;for(let y=Math.floor(a.height*rect[1]);y<a.height*rect[3];y++)for(let x=Math.floor(a.width*rect[0]);x<a.width*rect[2];x++){const at=(y*a.width+x)*4;if(Math.abs(a.data[at]-b.data[at])+Math.abs(a.data[at+1]-b.data[at+1])+Math.abs(a.data[at+2]-b.data[at+2])>90)n++;total++;}return n/total;}
 function menuWood(image){let brown=0,total=0;for(let y=Math.floor(image.height*.54);y<image.height*.94;y++)for(let x=Math.floor(image.width*.25);x<image.width*.75;x++){const at=(y*image.width+x)*4,r=image.data[at],g=image.data[at+1],b=image.data[at+2];if(r>90&&r>g*1.1&&g>b*1.2)brown++;total++;}return brown/total;}
@@ -10,6 +11,7 @@ const types={'.wasm':'application/wasm','.js':'text/javascript','.html':'text/ht
 const server=createServer((req,res)=>{let relative=decodeURIComponent(new URL(req.url,'http://localhost').pathname);if(relative==='/')relative='/index.html';const path=resolve(root,'.'+relative);if(!path.startsWith(root+sep)){res.writeHead(403).end();return;}try{res.writeHead(200,{'Content-Type':types[extname(path)]||'application/octet-stream','Content-Length':statSync(path).size});createReadStream(path).pipe(res);}catch{res.writeHead(404).end();}});
 await new Promise(r=>server.listen(8765,'127.0.0.1',r));const engine=process.env.MOBILE_BROWSER==='webkit'?webkit:chromium;const browser=await engine.launch({headless:true,...(engine===chromium?{args:['--enable-unsafe-swiftshader','--no-sandbox']}: {})});const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:process.env.ORIGINAL_DESKTOP!=='true',isMobile:process.env.ORIGINAL_DESKTOP!=='true'});const page=await context.newPage();const logs=[],errors=[];const roomPosts=[],roomResponses=[];page.on('response',async response=>{if(response.request().method()==='POST'&&new URL(response.url()).pathname==='/v1/rooms'){roomResponses.push({status:response.status(),error:response.status()>=400?await response.text():undefined});}});page.on('request',request=>{if(request.method()==='POST'&&new URL(request.url()).pathname==='/v1/rooms'){const body=request.postDataBuffer();if(body?.length>=20)roomPosts.push({url:request.url(),app:body.subarray(4,20).toString('hex'),flags:body.readUInt32LE(20),name:body.toString('utf16le',26,26+body.readUInt16LE(24)*2),bytes:body.length});}});page.on('console',m=>{logs.push(m.text());if(logs.length%100===0)console.log(logs.slice(-3).join('\n'));});page.on('pageerror',e=>errors.push(e.stack||String(e)));
 try{
+ if(process.env.CHECK_GAME_AUDIO==='true')await context.addInitScript(probeAudio);
  if(process.env.BLOCK_BROWSER_STORAGE==='true')await context.addInitScript(()=>{
   Object.defineProperty(navigator,'serviceWorker',{configurable:true,get:()=>{throw new DOMException('Service worker permission denied','SecurityError');}});
   Object.defineProperty(window,'caches',{configurable:true,get:()=>{throw new DOMException('Storage permission denied','SecurityError');}});
@@ -32,14 +34,29 @@ try{
  await frame.evaluate(()=>{window.testTouch=[];const native=Module['_boxedwineEmscriptenMouseButton'];if(typeof native!=='function')throw new Error('Native input API missing');Module['_boxedwineEmscriptenMouseButton']=function(down,button,x,y){window.testTouch.push({type:down?'mousedown':'mouseup',button,x,y,time:performance.now()});return native(down,button,x,y);};});
  const canvas=frame.locator('#canvas'),box=await canvas.boundingBox();await point(page,box.x+box.width*.5,box.y+box.height*.25);await new Promise(r=>setTimeout(r,5000));await point(page,box.x+box.width*.5,box.y+box.height*.25);await new Promise(r=>setTimeout(r,5000));let before,previous;const menuReadyUntil=Date.now()+60000;
  while(Date.now()<menuReadyUntil){const shot=PNG.sync.read(await canvas.screenshot());const wood=menuWood(shot),movement=previous?imageChange(previous,shot,[.12,.08,.88,.48]):1,menuMovement=previous?imageChange(previous,shot,[.25,.54,.75,.94]):1;console.log('Main menu readiness:',{wood,movement,menuMovement});if(wood>.25&&movement<.01&&menuMovement<.015){before=shot;break;}previous=shot;await new Promise(r=>setTimeout(r,700));}
- if(!before)throw new Error('Original game main menu did not finish its initial animation');await page.screenshot({path:'mobile-test-results/mobile-main-menu.png'});await point(page,box.x+box.width*.5,box.y+box.height*.57);await new Promise(r=>setTimeout(r,8000));await page.screenshot({path:'mobile-test-results/mobile-duel-mode.png'});
+ const audioReport={};
+ const resetAudio=async()=>frame.evaluate(()=>{window.joeyAudio={blocks:0,peak:0,nonzeroBlocks:0,latePeak:0,started:performance.now()};});
+ const readAudio=async label=>{audioReport[label]=await frame.evaluate(()=>window.joeyAudio);writeFileSync('mobile-test-results/audio.json',JSON.stringify(audioReport,null,2));return audioReport[label];};
+ if(!before)throw new Error('Original game main menu did not finish its initial animation');
+ if(process.env.CHECK_GAME_AUDIO==='true'){
+  await resetAudio();await new Promise(r=>setTimeout(r,4000));const music=await readAudio('idleMenu');
+  if(music.blocks<5||music.peak>0.00001)throw new Error('Menu music was not silent: '+JSON.stringify(music));await resetAudio();
+ }
+ await page.screenshot({path:'mobile-test-results/mobile-main-menu.png'});await point(page,box.x+box.width*.5,box.y+box.height*.57);await new Promise(r=>setTimeout(r,8000));await page.screenshot({path:'mobile-test-results/mobile-duel-mode.png'});
+ if(process.env.CHECK_GAME_AUDIO==='true'){
+  const effects=await readAudio('menuEffects');if(effects.peak<0.001)throw new Error('Menu sound effects were muted');
+ }
  const after=PNG.sync.read(await canvas.screenshot());
  const logoChange=imageChange(before,after,[.12,.08,.88,.48]),menuChange=imageChange(before,after,[.25,.75,.75,.94]);console.log('Rendered menu transition:',{logoChange,menuChange});
  if(logoChange>.02||menuChange<.08)throw new Error('Touch did not open Duel Mode while preserving the game logo');
 
  if(process.env.MOBILE_SOLO==='true'){
+  if(process.env.CHECK_GAME_AUDIO==='true')await resetAudio();
   await point(page,box.x+box.width*.5,box.y+box.height*.57);await new Promise(r=>setTimeout(r,12000));await page.screenshot({path:'mobile-test-results/joey-single-duel.png'});
   const single=PNG.sync.read(await canvas.screenshot());if(imageChange(after,single,[.12,.08,.88,.48])<.15)throw new Error('The original Single Duel did not open');
+  if(process.env.CHECK_GAME_AUDIO==='true'){
+   const voice=await readAudio('joeyIntro');if(voice.latePeak<0.001)throw new Error('Joey introduction audio was muted');
+  }
   await point(page,box.x+box.width*.27,box.y+box.height*.77);await new Promise(r=>setTimeout(r,10000));await page.screenshot({path:'mobile-test-results/joey-single-response.png'});
   if(logs.some(l=>/Unhandled page fault|Unhandled exception|starting debugger/.test(l)))throw new Error('The original game crashed while entering Single Duel');
   writeFileSync('mobile-test-results/site-result.txt','PASS: one-click browser launch of the unmodified original game, actual Duel Mode and Single Duel screens. Screenshots record the original Joey opponent; complete AI duel/physical-phone performance remain unverified.\n');

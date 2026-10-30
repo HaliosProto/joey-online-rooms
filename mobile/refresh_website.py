@@ -2,6 +2,7 @@
 import argparse,hashlib,json,re,shutil
 from pathlib import Path
 from runtime_storage import tolerate_denied_storage
+from silence_music import silence_site_game
 p=argparse.ArgumentParser();p.add_argument('--site',type=Path,required=True);a=p.parse_args();site=a.site
 previous=(site/'sw.js').read_text(encoding='utf-8')
 match=re.search(r'const VIRTUAL=(\{[^\n]*\});',previous)
@@ -9,6 +10,7 @@ if not match:raise ValueError('Missing original game archive mapping')
 virtual=json.loads(match[1]);assert set(virtual)=={'game.zip','runtime.zip'}
 for data in virtual.values():
     assert all((site/part).is_file() for part in data['parts'])
+silence_site_game(site,virtual)
 for f in Path(__file__).with_name('web').iterdir():shutil.copyfile(f,site/f.name)
 shell=site/'boxedwine-shell.js';shell.write_text(tolerate_denied_storage(shell.read_text(encoding='utf-8')),encoding='utf-8')
 # The runtime uses fetch() for ZIP loading. Intercept only the fixed packaged
@@ -46,4 +48,4 @@ for f in sorted(site.iterdir()):
 (site/'assets.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
 sw=site/'sw.js';text=sw.read_text(encoding='utf-8').replace('const VIRTUAL={};','const VIRTUAL='+json.dumps(virtual)+';').replace('const ASSETS={};','const ASSETS='+json.dumps({f['path']:f['sha256'] for f in manifest})+';');sw.write_text(text,encoding='utf-8')
 (site/'.nojekyll').touch()
-print('Original game archives retained byte-for-byte. Website refreshed for one-click browser play.')
+print('Website refreshed. Original executable, game data, voices and effects retained; music PCM silenced.')

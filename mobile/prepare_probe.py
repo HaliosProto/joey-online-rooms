@@ -6,6 +6,7 @@ import shutil
 import urllib.request
 import zipfile
 from runtime_storage import tolerate_denied_storage
+from silence_music import silence_voice_archive
 
 p=argparse.ArgumentParser()
 p.add_argument('--engine',type=Path,required=True)
@@ -65,6 +66,7 @@ with zipfile.ZipFile(game) as incoming,zipfile.ZipFile(a.output/'game.zip','w',c
         name=entry.filename.split('/',1)[1]
         if name=='dinput.dll': data=(a.native/'dinput.dll').read_bytes()
         elif name=='joey-online.ini': data='[Online]\r\nEnabled=1\r\nEndpoint=http://127.0.0.1:80\r\n'.encode('utf-16')
+        elif name.lower()=='voice.dat': data,_=silence_voice_archive(incoming.read(entry))
         else: data=incoming.read(entry)
         outgoing.writestr('joey/'+name,data)
     outgoing.writestr('joey/start-game.bat',startup.replace('\n','\r\n'))
