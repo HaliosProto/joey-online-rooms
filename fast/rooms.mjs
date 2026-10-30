@@ -30,13 +30,13 @@ export class Rooms{
      else if(op===OP.DATA){const sender=reader.u32(),payload=JSON.parse(dec.decode(reader.take(reader.bytes.length-reader.offset)));this.onEvent({kind:'data',sender,payload});}
      else if(op===OP.LEFT){const id=reader.u32();reader.end();this.onEvent({kind:'left',id});}
      else if(op!==OP.PONG)throw Error('Unknown game message.');
-    }catch(error){socket.close(1008,'Invalid game data');this.onEvent({kind:'error',message:error.message});}
+    }catch(error){this.onEvent({kind:'error',message:error.message});socket.close(4008,'Invalid game data');}
    };
    socket.onerror=()=>{clearTimeout(timer);if(!welcomed)reject(Error('Could not connect to the room.'));};
    socket.onclose=()=>{clearTimeout(timer);clearInterval(this.heartbeat);if(!welcomed)reject(Error('This room is no longer available.'));this.onEvent({kind:'closed'});};
   });
   this.heartbeat=setInterval(()=>{if(socket.readyState===WebSocket.OPEN)socket.send(Uint8Array.of(OP.HEARTBEAT));},20000);
  }
- send(payload){const data=enc.encode(json(payload));if(data.length>65536)throw Error('Game update is too large.');if(this.socket?.readyState!==WebSocket.OPEN)throw Error('The room is disconnected.');this.socket.send(new Writer().u8(OP.SEND).u32(this.local===1?2:1).raw(data).finish());}
+ send(payload){const data=enc.encode(json(payload));if(data.length>65536)throw Error('Game update is too large.');if(this.socket?.readyState!==WebSocket.OPEN)throw Error('The room is disconnected.');this.socket.send(new Writer().u8(OP.SEND).u32(this.local===1?2:1).u32(0).raw(data).finish());}
  close(){clearInterval(this.heartbeat);if(this.socket){const s=this.socket;this.socket=null;s.onclose=null;s.close();}}
 }

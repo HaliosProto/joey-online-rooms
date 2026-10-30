@@ -47,18 +47,29 @@ def export(game,output,scripts,db):
     arc=Archive(game/'data.dat')
     ids=arc.read('bin#/card_id.bin');names=arc.read('bin#/card_nameeng.bin');desc=arc.read('bin#/card_desceng.bin');indices=arc.read('bin#/card_indxeng.bin');props=arc.read('bin#/card_prop.bin');passes=arc.read('bin#/card_pass.bin');packs=arc.read('bin#/card_pack.bin')
     image_names=[line.strip() for line in arc.read('card/list_card.txt').decode('utf-8-sig').splitlines() if line.strip() and not line.startswith('//')]
-    catalog=[];by_original={}
+    connection=sqlite3.connect(db);connection.row_factory=sqlite3.Row
+    valid_codes={r[0] for r in connection.execute('SELECT id FROM datas')}
+    canonical={r['name'].casefold():r['id'] for r in connection.execute('SELECT id,name FROM texts') if r['id'] in valid_codes}
+    catalog=[];by_original={};by_code={};original_count=0
     for i,image in enumerate(image_names):
         if i*2+2>len(ids):break
         original=struct.unpack_from('<H',ids,i*2)[0];passcode=passes[i*4:i*4+4].hex();code=int(passcode) if passcode.isdecimal() else 0;prop=struct.unpack_from('<I',props,i*4)[0];pack=struct.unpack_from('<H',packs,i*2)[0]
         name=names[i*64:(i+1)*64].split(b'\0')[0].decode('utf-8');start=struct.unpack_from('<I',indices,i*4)[0];text=desc[start:].split(b'\0')[0].decode('utf-8')
-        if not name or not code or not pack&4:continue
+        if not name or not code or not pack&7:continue
+        if code not in valid_codes:
+            code=canonical.get(name.casefold(),0)
+            if not code:raise ValueError('No duel-engine ID for original card: '+name)
         path='card/'+image.replace('\\','/').split('/')[-1]
         if path.casefold() not in arc.entries:raise ValueError('Missing card art: '+path)
+        original_count+=1
+        if code in by_code:
+            by_original[original]=by_code[code]
+            variant=f'cards/{code}-art-{original}.webp';bitmap=Image.open(io.BytesIO(arc.read(path)));bitmap.convert('RGB').save(output/variant,'WEBP',quality=86,method=4);by_code[code].setdefault('variants',[]).append(variant)
+            continue
         bitmap=Image.open(io.BytesIO(arc.read(path)));bitmap.convert('RGB').save(images/f'{code}.webp','WEBP',quality=86,method=4)
         kind=(prop>>20)&31;sub=(prop>>18)&3
         card={'id':code,'originalId':original,'name':name,'text':text,'image':f'cards/{code}.webp','level':(prop>>25)&15,'attack':((prop>>9)&511)*10,'defense':(prop&511)*10,'kind':('spell' if kind==22 else 'trap' if kind==21 else 'fusion' if sub==2 else 'ritual' if sub==3 else 'monster')}
-        by_original[original]=card;catalog.append(card)
+        by_original[original]=card;by_code[code]=card;catalog.append(card)
     bitmap=Image.open(io.BytesIO(arc.read('card/card_ura.bmp')));bitmap.convert('RGB').save(images/'back.webp','WEBP',quality=86)
     for size in [192,512]:
         icon=Image.new('RGB',(size,size),(16,29,36));art=bitmap.convert('RGB');art.thumbnail((int(size*.7),int(size*.9)));icon.paste(art,((size-art.width)//2,(size-art.height)//2));icon.save(output/f'icon-{size}.png')
@@ -70,7 +81,6 @@ def export(game,output,scripts,db):
         n=struct.unpack_from('<H',deck,at)[0]
         if len(deck)<at+2+n*2:raise ValueError('Truncated fusion deck')
         extra=[by_original[struct.unpack_from('<H',deck,at+2+i*2)[0]]['id'] for i in range(n)]
-    connection=sqlite3.connect(db);connection.row_factory=sqlite3.Row
     cards={};texts={}
     for r in connection.execute('SELECT * FROM datas'):
         setcode=r['setcode']&((1<<64)-1);level=r['level'];kind=r['type']
@@ -92,7 +102,7 @@ def export(game,output,scripts,db):
         text=official[name].read_text(encoding='utf-8-sig');files[name]=text
         for dependency in re.findall(r'c\d+\.lua',text)+[f'c{x}.lua' for x in re.findall(r'LoadCardScript\(\s*(\d+)',text)]:
             if dependency not in files:queue.append(dependency)
-    for name,data in [('catalog.json',{'cards':catalog,'starter':{'main':main,'extra':extra}}),('rules.json',{'cards':cards,'texts':texts,'scripts':files})]:
+    for name,data in [('catalog.json',{'cards':catalog,'originalCardEntries':original_count,'starter':{'main':main,'extra':extra}}),('rules.json',{'cards':cards,'texts':texts,'scripts':files})]:
         (output/name).write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     print(json.dumps({'cards':len(catalog),'scripts':len(files),'rulesBytes':(output/'rules.json').stat().st_size,'artBytes':sum(p.stat().st_size for p in images.iterdir()),'starterCards':len(main)},indent=2))
 

@@ -36,6 +36,7 @@ jobs:
       - name: Build directly executed client
         run: |
           npm ci --prefix fast
+          node --test fast/protocol.test.mjs
           node fast/build.mjs
       - name: Install cloud browser
         working-directory: fast

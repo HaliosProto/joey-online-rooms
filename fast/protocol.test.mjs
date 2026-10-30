@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {Rooms} from './rooms.mjs';import {parseSend} from '../cloud/src/protocol.mjs';
+import {choices,validateChoice} from './prompts.mjs';
+test('client packets preserve the server envelope and complete JSON payload',()=>{for(const player of [1,2]){const rooms=new Rooms();rooms.local=player;let packet;rooms.socket={readyState:WebSocket.OPEN,send:bytes=>packet=bytes};const data={kind:'action',revision:4,response:{type:1,action:7,index:null}};rooms.send(data);const parsed=parseSend(packet);assert.equal(parsed.target,player===1?2:1);assert.equal(parsed.flags,0);assert.deepEqual(JSON.parse(new TextDecoder().decode(parsed.payload)),data);}});
+test('an unoffered command cannot be injected through a remote response',()=>{const plan=choices({type:11,player:0,summons:[],special_summons:[],pos_changes:[],monster_sets:[],spell_sets:[],activates:[],to_bp:false,to_ep:true});assert.doesNotThrow(()=>validateChoice(plan,{type:1,action:7,index:null}));assert.throws(()=>validateChoice(plan,{type:1,action:0,index:999}));});
