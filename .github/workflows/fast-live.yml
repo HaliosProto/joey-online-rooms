@@ -1,0 +1,37 @@
+name: Verify published emulator-free game
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: fast-tested-site
+          path: fast-build
+          run-id: ${{ inputs.build_run }}
+          github-token: ${{ github.token }}
+      - name: Install cloud browser
+        run: |
+          npm ci --prefix fast
+          cd fast
+          npx playwright install --with-deps chromium
+      - name: Complete a duel on the published site through the production relay
+        env:
+          FAST_SITE_URL: https://haliosproto.github.io/joey-online-rooms/fast/
+        run: node fast/test-browser.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: fast-live-results
+          path: fast-results/
+          retention-days: 7
