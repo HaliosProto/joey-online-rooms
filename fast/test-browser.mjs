@@ -6,10 +6,10 @@ const root=resolve('fast-build');await mkdir('fast-results',{recursive:true});
 const types={'.html':'text/html','.mjs':'text/javascript','.js':'text/javascript','.css':'text/css','.json':'application/json','.wasm':'application/wasm','.webp':'image/webp','.png':'image/png','.webmanifest':'application/manifest+json'};
 const server=createServer(async(req,res)=>{try{let path=decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/fast\//,'/');if(path==='/')path='/index.html';const file=resolve(root,'.'+path);if(!file.startsWith(root+sep))throw Error();const info=await stat(file);res.writeHead(200,{'Content-Type':types[extname(file)]||'application/octet-stream','Content-Length':info.size});res.end(await readFile(file));}catch{res.writeHead(404).end();}});await new Promise(r=>server.listen(8765,'127.0.0.1',r));
 const browser=await(process.env.FAST_BROWSER==='webkit'?webkit:chromium).launch({headless:true});const errors=[],logs=[];
-const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});await context.addInitScript(()=>{globalThis.JOEY_TEST_ENDPOINT='http://127.0.0.1:8787';});
+const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});if(!process.env.FAST_SITE_URL)await context.addInitScript(()=>{globalThis.JOEY_TEST_ENDPOINT='http://127.0.0.1:8787';});
 const page=await context.newPage();const guest=await context.newPage();
 for(const [p,label] of [[page,'host'],[guest,'guest']]){p.on('pageerror',e=>errors.push(label+': '+e.stack));p.on('console',m=>{if(m.type()==='error')logs.push(label+': '+m.text());});}
-async function load(p,name){await p.goto('http://127.0.0.1:8765/fast/');await p.locator('#lobby').waitFor();await p.locator('#player-name').fill(name);}
+async function load(p,name){await p.goto(process.env.FAST_SITE_URL||'http://127.0.0.1:8765/fast/');await p.locator('#lobby').waitFor();await p.locator('#player-name').fill(name);}
 async function state(p){return p.evaluate(()=>window.joeyState);}
 async function choose(p,index){
  const option=await p.evaluate(i=>window.joeyPlan.options[i],index);

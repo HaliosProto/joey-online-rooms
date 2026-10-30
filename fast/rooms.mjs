@@ -38,5 +38,5 @@ export class Rooms{
   this.heartbeat=setInterval(()=>{if(socket.readyState===WebSocket.OPEN)socket.send(Uint8Array.of(OP.HEARTBEAT));},20000);
  }
  send(payload){const data=enc.encode(json(payload));if(data.length>65536)throw Error('Game update is too large.');if(this.socket?.readyState!==WebSocket.OPEN)throw Error('The room is disconnected.');this.socket.send(new Writer().u8(OP.SEND).u32(this.local===1?2:1).u32(0).raw(data).finish());}
- close(){clearInterval(this.heartbeat);if(this.socket){const s=this.socket;this.socket=null;s.onclose=null;s.close();}}
+ close(){clearInterval(this.heartbeat);if(this.socket){const s=this.socket;this.socket=null;s.onclose=null;s.onmessage=null;s.onerror=null;s.close();}}
 }

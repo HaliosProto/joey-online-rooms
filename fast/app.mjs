@@ -65,7 +65,7 @@ function onRoom(event){
    }else if(mode==='guest'&&event.sender===1&&data.kind==='state'){
     if(data.view?.viewer!==1||!Array.isArray(data.view.players)||data.view.players.length!==2)throw Error('Invalid field update.');applyView(data.view);pending=false;
    }
-  }else if(event.kind==='left'||event.kind==='closed'){if(mode==='host'||mode==='guest')status('Your friend disconnected. Leave this duel to create or join another room.',true);}
+  }else if(event.kind==='left'||event.kind==='closed'){if(mode==='host'||mode==='guest'){if(view&&view.winner===null){view.prompt=null;pending=false;plan={title:'Room closed',options:[]};renderChoices();$('surrender').disabled=true;}status('Your friend disconnected. Leave this duel to create or join another room.',true);}}
   else if(event.kind==='error')status(event.message,true);
  }catch(error){status(error.message,true);}
 }
@@ -75,7 +75,7 @@ async function practice(){
 function enterTable(){$('lobby').hidden=true;$('table').hidden=false;$('leave').hidden=false;selected=null;$('board').replaceChildren();$('hand').replaceChildren();$('decisions').replaceChildren();$('decision-title').textContent='Preparing your table…';}
 function leave(){roomService.close();mode='lobby';view=null;views=null;started=false;pending=false;guestDeck=null;if(worker){worker.terminate();worker=null;workerReady=null;}$('table').hidden=true;$('lobby').hidden=false;$('leave').hidden=true;status('Choose a room or create a new table.');refresh();}
 function applyView(next){pending=false;view=next;selections=[];places=[];order=[];counters=[];selected=null;plan=choices(view.prompt,labels,catalog.cards);render();metrics.lastViewMs=performance.now()-metrics.pageStart;window.joeyState=view;window.joeyPlan=plan;window.dispatchEvent(new CustomEvent('joey-state',{detail:{revision:view.revision}}));}
-function respond(response){if(pending||!view?.prompt)return;pending=true;renderChoices();const data={kind:'respond',player:view.viewer,revision:view.revision,response};if(mode==='guest')roomService.send({kind:'action',revision:view.revision,response});else worker.postMessage(data);}
+function respond(response){if(pending||!view?.prompt)return;pending=true;renderChoices();const data={kind:'respond',player:view.viewer,revision:view.revision,response};try{if(mode==='guest')roomService.send({kind:'action',revision:view.revision,response});else worker.postMessage(data);}catch(error){pending=false;status(error.message,true);renderChoices();}}
 function phaseName(phase){return ({1:'Draw',2:'Standby',4:'Main phase 1',8:'Battle phase',16:'Battle phase',32:'Damage step',64:'Damage calculation',128:'Battle phase',256:'Main phase 2',512:'End phase'})[phase]||'Starting duel';}
 function render(){
  const me=view.viewer,other=1-me;$('turn-label').textContent=`Turn ${view.turnNumber} · ${names[view.turn]||'Duelist'} · ${phaseName(view.phase)}`;
